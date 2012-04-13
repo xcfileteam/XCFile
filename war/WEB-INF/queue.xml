@@ -1,0 +1,13 @@
+<queue-entries>
+	<queue>
+		<name>state</name>
+		<rate>32/s</rate>
+		<max-concurrent-requests>1</max-concurrent-requests>
+	</queue>
+	<queue>
+		<name>user</name>
+		<rate>32/s</rate>
+		<bucket-size>64</bucket-size>
+		<max-concurrent-requests>64</max-concurrent-requests>
+	</queue>
+</queue-entries>

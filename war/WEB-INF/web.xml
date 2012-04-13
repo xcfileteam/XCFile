@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<web-app xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xmlns="http://java.sun.com/xml/ns/javaee"
+xmlns:web="http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
+xsi:schemaLocation="http://java.sun.com/xml/ns/javaee
+http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
+	<servlet>
+		<servlet-name>ListServlet</servlet-name>
+		<servlet-class>indexapp.ListServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>ListServlet</servlet-name>
+		<url-pattern>/list</url-pattern>
+	</servlet-mapping>
+	<servlet>
+		<servlet-name>InitServlet</servlet-name>
+		<servlet-class>indexapp.InitServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>InitServlet</servlet-name>
+		<url-pattern>/init</url-pattern>
+	</servlet-mapping>
+	
+	<servlet>
+		<servlet-name>UploadServlet</servlet-name>
+		<servlet-class>fileapp.UploadServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>UploadServlet</servlet-name>
+		<url-pattern>/upload</url-pattern>
+	</servlet-mapping>
+	<servlet>
+		<servlet-name>DownloadServlet</servlet-name>
+		<servlet-class>fileapp.DownloadServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>DownloadServlet</servlet-name>
+		<url-pattern>/down/*</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>DownloadServlet</servlet-name>
+		<url-pattern>/download</url-pattern>
+	</servlet-mapping>
+	
+	<servlet>
+		<servlet-name>InfoServlet</servlet-name>
+		<servlet-class>fileapp.InfoServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>InfoServlet</servlet-name>
+		<url-pattern>/info</url-pattern>
+	</servlet-mapping>
+
+	<security-constraint>
+		<web-resource-collection>
+			<web-resource-name>InitServlet</web-resource-name>
+			<url-pattern>/init</url-pattern>
+		</web-resource-collection>
+		<auth-constraint>
+			<role-name>admin</role-name>
+		</auth-constraint>
+	</security-constraint>
+
+	<servlet>
+		<servlet-name>TaskServlet</servlet-name>
+		<servlet-class>fileapp.TaskServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>TaskServlet</servlet-name>
+		<url-pattern>/task</url-pattern>
+	</servlet-mapping>
+	
+	<security-constraint>
+		<web-resource-collection>
+			<web-resource-name>TaskServlet</web-resource-name>
+			<url-pattern>/task</url-pattern>
+		</web-resource-collection>
+		<auth-constraint>
+			<role-name>admin</role-name>
+		</auth-constraint>
+	</security-constraint>
+
+	<welcome-file-list>
+		<welcome-file>indexdshfdsjkfhdsjkf.jsp</welcome-file>
+	</welcome-file-list>
+</web-app>

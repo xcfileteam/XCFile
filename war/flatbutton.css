@@ -1,0 +1,68 @@
+.button_r{
+	width:80px;
+	height:22px;
+	line-height:22px;
+	background-color:#F62217;
+	border:solid 1px #CE0000;
+	text-align:center;
+	cursor:default;
+	color:#FFFFFF;
+	font-weight:bold;
+}
+.button_r_hi{
+	width:80px;
+	height:22px;
+	line-height:22px;
+	background-color:#FF3025;
+	border:solid 1px #CE0000;
+	text-align:center;
+	cursor:default;
+	color:#FFFFFF;
+	font-weight:bold;
+}
+
+.button_b{
+	width:80px;
+	height:22px;
+	line-height:22px;
+	background-color:#306EFF;
+	border:solid 1px #2B65EC;
+	text-align:center;
+	cursor:default;
+	color:#FFFFFF;
+	font-weight:bold;
+}
+.button_b_hi{
+	width:80px;
+	height:22px;
+	line-height:22px;
+	background-color:#3C77FF;
+	border:solid 1px #2B65EC;
+	text-align:center;
+	cursor:default;
+	color:#FFFFFF;
+	font-weight:bold;
+}
+
+.button_gray{
+	width:80px;
+	height:22px;
+	line-height:22px;
+	background-color:#696969;
+	border:solid 1px #646464;
+	text-align:center;
+	cursor:default;
+	color:#FFFFFF;
+	font-weight:bold;
+}
+.button_gray_hi{
+	width:80px;
+	height:22px;
+	line-height:22px;
+	background-color:#6F6F6F;
+	border:solid 1px #646464;
+	text-align:center;
+	cursor:default;
+	color:#FFFFFF;
+	font-weight:bold;
+}
