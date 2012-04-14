@@ -52,7 +52,7 @@ public class ListServlet extends HttpServlet{
 				resp.getWriter().println(listObjList.get(index).link);
 			}
 		}else{
-			fileid = Sec.createFileID();
+			fileid = Sec.createFileID(ms);
 			seckey = Sec.createSecKey(fileid);
 			
 			resp.getWriter().println(fileid);

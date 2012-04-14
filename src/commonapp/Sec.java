@@ -4,15 +4,14 @@ import java.net.*;
 import java.util.*;
 import java.math.*;
 import java.security.*;
-
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
-
 import com.google.appengine.api.datastore.*;
 import com.google.appengine.api.datastore.Key;
 import com.google.appengine.api.datastore.KeyFactory;
 import com.google.appengine.api.datastore.Query.*;
 import com.google.appengine.api.memcache.*;
+import com.google.appengine.api.memcache.MemcacheService.SetPolicy;
 import com.google.appengine.api.urlfetch.*;
 import com.google.appengine.api.urlfetch.FetchOptions;
 import com.google.appengine.api.users.*;
@@ -25,18 +24,26 @@ public class Sec{
 			'0','1','2','3','4','5','6','7','8','9'};
 	private static final byte[] UserSecIdAES = {-15,-11,54,37,-70,73,78,18,75,-29,-53,-123,-117,-110,-13,56};
 	
-	public static String createFileID(){
+	public static String createFileID(MemcacheService ms){
 		Long num;
-		String uid;
+		Long ret;
+		String fileid;
 		
-		uid = "";
-		num = new Date().getTime();
-		while(num > 0){
-			uid += UIDMap[(int)(num % 62)];
-			num /= 62;
+		fileid = "";
+		num = (new Date().getTime()) * 62L;
+		
+		ret = ms.increment("sec_FileID_Count",1);
+		if(ret == null){
+			ms.put("sec_FileID_Count",0L,Expiration.byDeltaSeconds(86400),SetPolicy.ADD_ONLY_IF_NOT_PRESENT);
+			ret = ms.increment("sec_FileID_Count",1);
 		}
-		uid += new Random().nextInt(10);
-		return uid;
+		num += (ret - 1L) % 62L;
+		
+		while(num > 0L){
+			fileid += UIDMap[(int)(num % 62L)];
+			num /= 62L;
+		}
+		return fileid;
 	}
 	public static String createSecKey(String data){
 		MessageDigest md;
