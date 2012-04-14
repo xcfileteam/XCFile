@@ -10,7 +10,6 @@ import com.google.appengine.api.datastore.*;
 import com.google.appengine.api.memcache.*;
 import com.google.appengine.api.memcache.MemcacheService.SetPolicy;
 import com.google.appengine.api.memcache.MemcacheService.IdentifiableValue;
-import com.google.appengine.api.datastore.Text;
 import com.google.appengine.api.files.*;
 import com.google.appengine.api.taskqueue.*;
 import com.google.appengine.api.taskqueue.TaskOptions.Method;
@@ -34,8 +33,8 @@ public class UploadServlet extends HttpServlet{
 		
 		String filename;
 		Long filesize;
-		Text serverlist;
-		Text blobkeylist;
+		String serverlist;
+		String blobkeylist;
 		String usersecid;
 		String userseckey;
 		String userid;
@@ -68,10 +67,10 @@ public class UploadServlet extends HttpServlet{
 			if(type.equals("create") == true){
 				ds = DatastoreServiceFactory.getDatastoreService();
 				
-				filename = readLine(inb);
+				filename = Common.EncodeURI(readLine(inb));
 				filesize = Long.valueOf(readLine(inb));
-				serverlist = new Text(readLine(inb));
-				blobkeylist = new Text(readLine(inb));
+				serverlist = readLine(inb);
+				blobkeylist = readLine(inb);
 				
 				usersecid = readLine(inb);
 				if(usersecid.equals("") == true){
@@ -142,10 +141,10 @@ public class UploadServlet extends HttpServlet{
 	}
 	
 	public String readLine(InputStream in) throws IOException{
-		StringBuffer ret;
+		StringBuilder ret;
 		int c;
 		
-		ret = new StringBuffer();
+		ret = new StringBuilder();
 		while(true){
 			c = in.read();
 			if(c == -1){

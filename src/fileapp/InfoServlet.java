@@ -147,8 +147,8 @@ public class InfoServlet extends HttpServlet{
 				ms.delete("cache_FileObj_" + fileid);
 				ms.put("user_DelFileID_" + fileid,true);
 				
-				serverList = fileObj.serverlist.getValue().split("\\|");
-				blobkeyList = fileObj.blobkeylist.getValue().split("\\|");
+				serverList = fileObj.serverlist.split("\\|");
+				blobkeyList = fileObj.blobkeylist.split("\\|");
 				partSize = fileObj.filesize / serverList.length;
 				blobkeyIndex = 0;
 				
@@ -190,7 +190,7 @@ public class InfoServlet extends HttpServlet{
 				delBlobKeyList = Arrays.asList(req.getParameter("delblobkeylist").split("\\|"));
 				for(index = 0;index < delBlobKeyList.size();index++){
 					try{
-						bs.delete(new BlobKey(delBlobKeyList.get(index)));
+						bs.delete(new BlobKey(delBlobKeyList.get(index)),new BlobKey(delBlobKeyList.get(index)));
 					}catch(Exception e){
 						log.log(Level.WARNING,"Error",e);
 					}

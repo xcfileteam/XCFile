@@ -20,7 +20,7 @@ public class UploadThread extends SwingWorker<Void,Void>{
 	public Map<Long,String> blobkeyMap;
 	public FileChannel fileChannel;
 	
-	private String encodeFilename;
+	private String filename;
 	private RandomAccessFile RAF;
 	private List<String> serverList;
 	private BlockingQueue<Runnable> threadQueue;
@@ -33,13 +33,7 @@ public class UploadThread extends SwingWorker<Void,Void>{
 			this.itemid = itemid;
 			this.file = file;
 			
-			encodeFilename = URLEncoder.encode(file.getName(),"UTF-8");
-			encodeFilename = encodeFilename.replace("+","%20");
-			encodeFilename = encodeFilename.replace("%7E","~");
-			encodeFilename = encodeFilename.replace("%27","'");
-			encodeFilename = encodeFilename.replace("%28","(");
-			encodeFilename = encodeFilename.replace("%29",")");
-			encodeFilename = encodeFilename.replace("%21","!");
+			filename = file.getName();
 			
 			deleteflag = false;
 			cancelflag = false;
@@ -101,7 +95,7 @@ public class UploadThread extends SwingWorker<Void,Void>{
 		
 		HttpURLConnection conn;
 		BufferedOutputStream outb;
-		String header;
+		StringBuilder header;
 		
 		serverString = serverList.get(0);
 		for(index = 1;index < serverList.size();index++){
@@ -121,21 +115,32 @@ public class UploadThread extends SwingWorker<Void,Void>{
 		conn.setRequestProperty("Cache-Control","no-cache,max-age=0");
 		conn.setRequestProperty("Pragma","no-cache");
 		
-		header = fileid + "\r\n" + fileseckey + "\r\n" + "create\r\n" + 
-				encodeFilename + "\r\n" +
-				String.valueOf(file.length()) + "\r\n" +
-				serverString + "\r\n" +
-				blobkeyString + "\r\n";
+		header = new StringBuilder();
+		header.append(fileid);
+		header.append("\r\n");
+		header.append(fileseckey);
+		header.append("\r\n");
+		header.append("create\r\n");
+		header.append(filename);
+		header.append("\r\n");
+		header.append(String.valueOf(file.length()));
+		header.append("\r\n");
+		header.append(serverString);
+		header.append("\r\n");
+		header.append(blobkeyString);
+		header.append("\r\n");
 		
 		if(UploadApplet.loginFlag == false){
-			header += "\r\n";
+			header.append("\r\n");
 		}else{
-			header += UploadApplet.userSecId + "\r\n" +
-					UploadApplet.userSecKey + "\r\n";
+			header.append(UploadApplet.userSecId);
+			header.append("\r\n");
+			header.append(UploadApplet.userSecKey);
+			header.append("\r\n");
 		}
 		
 		outb = new BufferedOutputStream(conn.getOutputStream());
-		outb.write(header.getBytes("UTF-8"));
+		outb.write(header.toString().getBytes("UTF-8"));
 		outb.flush();
 		
 		if(conn.getResponseCode() != 200){
@@ -239,7 +244,7 @@ public class UploadThread extends SwingWorker<Void,Void>{
 			fileChannel.close();
 			RAF.close();
 			UploadApplet.updateState(itemid,"link");
-			UploadApplet.showLink(itemid,fileid,fileSize,serverHead + "/down/" + fileid + "/" + encodeFilename);
+			UploadApplet.showLink(itemid,fileid,fileSize,serverHead + "/down/" + fileid + "/" + filename);
 			
 			System.out.println("Done");
 		}catch(Exception e){
@@ -273,7 +278,7 @@ class PartThread extends SwingWorker<Void,Void>{
 		FileChannel fc;
 		BufferedReader reader;
 		
-		String header;
+		StringBuilder header;
 		Long nowOffset;
 		Long nowSize;
 		int rl;
@@ -292,10 +297,17 @@ class PartThread extends SwingWorker<Void,Void>{
 				conn.setRequestProperty("Content-Type","application/octet-stream");
 				conn.setChunkedStreamingMode(65536);
 				
-				header = uploadThread.fileid + "\r\n" + uploadThread.fileseckey + "\r\n" + "upload\r\n" + String.valueOf(partsize) + "\r\n";
-	
+				header = new StringBuilder();
+				header.append(uploadThread.fileid);
+				header.append("\r\n");
+				header.append(uploadThread.fileseckey);
+				header.append("\r\n");
+				header.append("upload\r\n");
+				header.append(String.valueOf(partsize));
+				header.append("\r\n");
+				
 				wbc = Channels.newChannel(conn.getOutputStream());
-				wbc.write(ByteBuffer.wrap(header.getBytes("UTF-8")));
+				wbc.write(ByteBuffer.wrap(header.toString().getBytes("UTF-8")));
 			
 				fc = uploadThread.fileChannel;
 				fbuf = ByteBuffer.allocateDirect(65536);

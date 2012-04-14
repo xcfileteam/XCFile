@@ -4,14 +4,13 @@ import java.io.*;
 import java.net.*;
 import java.util.List;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Map;
+import java.util.concurrent.Future;
 import java.util.logging.*;
 import javax.servlet.http.*;
 import com.google.appengine.api.memcache.*;
 import com.google.appengine.api.memcache.MemcacheService.*;
 import com.google.appengine.api.urlfetch.*;
-import com.google.appengine.api.blobstore.*;
 import commonapp.Common;
 import commonapp.Sec;
 import commonapp.Pair;
@@ -30,6 +29,7 @@ public class TaskServlet extends HttpServlet{
 		
 	public void doPost(HttpServletRequest req,HttpServletResponse resp) throws IOException{
 		int index;
+		int subIndex;
 		String msKey;
 		
 		MemcacheService ms;
@@ -42,16 +42,17 @@ public class TaskServlet extends HttpServlet{
 		Long newValue;
 		IdentifiableValue idenValue;
 		HTTPRequest httpReq;
-		String param;
+		StringBuilder param;
 		
-		int subIndex;
 		List<String> delBlobKeyList;
 		String serverlink;
 		List<String> delBlobListKey;
 		Map<String,Object> delBlobListMap;
 		Object[] delBlobListArray;
-		StringBuffer delBlobKeyString;
 		Long delBlobSize;
+		int delBlobKeyCount;
+		StringBuilder delBlobKeyString;
+		List<Future<HTTPResponse>> respList;
 		
 		resp.addHeader("Access-Control-Allow-Origin","*");
 		resp.setContentType("text/plain");
@@ -83,11 +84,19 @@ public class TaskServlet extends HttpServlet{
 				}
 				
 				httpReq = new HTTPRequest(new URL(Common.ListServer + "/info"),HTTPMethod.POST,com.google.appengine.api.urlfetch.FetchOptions.Builder.withDeadline(10));
-				param = "type=" + URLEncoder.encode("stateblobinc","UTF-8") + "&" +
-						"serverkey=" + URLEncoder.encode(Sec.ServerKey,"UTF-8") + "&" +
-						"name=" + URLEncoder.encode(serverName.split(".appspot.com")[0],"UTF-8") + "&" +
-						"value=" + URLEncoder.encode(String.valueOf(newValue - oldValue),"UTF-8");
-				httpReq.setPayload(param.getBytes("UTF-8"));
+				param = new StringBuilder();
+				param.append("type=");
+				param.append(URLEncoder.encode("stateblobinc","UTF-8"));
+				param.append("&");
+				param.append("serverkey=");
+				param.append(URLEncoder.encode(Sec.ServerKey,"UTF-8"));
+				param.append("&");
+				param.append("name=");
+				param.append(URLEncoder.encode(serverName.split(".appspot.com")[0],"UTF-8"));
+				param.append("&");
+				param.append("value=");
+				param.append(URLEncoder.encode(String.valueOf(newValue - oldValue),"UTF-8"));
+				httpReq.setPayload(param.toString().getBytes("UTF-8"));
 				us.fetch(httpReq);
 			}else if(type.equals("stateblobdec") == true){
 				ms.delete("task_State_BlobDec");
@@ -109,11 +118,19 @@ public class TaskServlet extends HttpServlet{
 				}
 				
 				httpReq = new HTTPRequest(new URL(Common.ListServer + "/info"),HTTPMethod.POST,com.google.appengine.api.urlfetch.FetchOptions.Builder.withDeadline(10));
-				param = "type=" + URLEncoder.encode("stateblobinc","UTF-8") + "&" +
-						"serverkey=" + URLEncoder.encode(Sec.ServerKey,"UTF-8") + "&" +
-						"name=" + URLEncoder.encode(serverName.split(".appspot.com")[0],"UTF-8") + "&" +
-						"value=" + URLEncoder.encode(String.valueOf(-(newValue - oldValue)),"UTF-8");
-				httpReq.setPayload(param.getBytes("UTF-8"));
+				param = new StringBuilder();
+				param.append("type=");
+				param.append(URLEncoder.encode("stateblobinc","UTF-8"));
+				param.append("&");
+				param.append("serverkey=");
+				param.append(URLEncoder.encode(Sec.ServerKey,"UTF-8"));
+				param.append("&");
+				param.append("name=");
+				param.append(URLEncoder.encode(serverName.split(".appspot.com")[0],"UTF-8"));
+				param.append("&");
+				param.append("value=");
+				param.append(URLEncoder.encode(String.valueOf(-(newValue - oldValue)),"UTF-8"));
+				httpReq.setPayload(param.toString().getBytes("UTF-8"));
 				us.fetch(httpReq);
 			}else if(type.equals("userdeltask") == true){
 				serverlink = req.getParameter("serverlink");
@@ -140,19 +157,57 @@ public class TaskServlet extends HttpServlet{
 				
 				delBlobListMap = ms.getAll(delBlobListKey);
 				delBlobListArray = delBlobListMap.values().toArray();
-				delBlobKeyString = new StringBuffer();
+				delBlobKeyString = new StringBuilder();
 				delBlobSize = 0L;
+				delBlobKeyCount = 0;
+				respList = new ArrayList<Future<HTTPResponse>>();
 				for(index = 0;index < delBlobListArray.length;index++){
 					delBlobKeyList = ((Pair<List<String>,Long>)delBlobListArray[index]).first;
 					delBlobSize += ((Pair<List<String>,Long>)delBlobListArray[index]).second;
 					for(subIndex = 0;subIndex < delBlobKeyList.size();subIndex++){
 						delBlobKeyString.append(delBlobKeyList.get(subIndex));
 						delBlobKeyString.append("|");
+						delBlobKeyCount++;
+						
+						if(delBlobKeyCount >= 16){
+							httpReq = new HTTPRequest(new URL(serverlink + "/info"),HTTPMethod.POST,com.google.appengine.api.urlfetch.FetchOptions.Builder.withDeadline(60));
+							param = new StringBuilder();
+							param.append("type=");
+							param.append(URLEncoder.encode("userdelblob","UTF-8"));
+							param.append("&");
+							param.append("serverkey=");
+							param.append(URLEncoder.encode(Sec.ServerKey,"UTF-8"));
+							param.append("&");
+							param.append("delblobkeylist=");
+							param.append(URLEncoder.encode(delBlobKeyString.substring(0,delBlobKeyString.length() - 1),"UTF-8"));
+							param.append("&");
+							param.append("delblobsize=");
+							param.append(URLEncoder.encode(String.valueOf(delBlobSize),"UTF-8"));
+							httpReq.setPayload(param.toString().getBytes("UTF-8"));
+							respList.add(us.fetchAsync(httpReq));
+							
+							delBlobKeyString = new StringBuilder();
+							delBlobSize = 0L;
+							delBlobKeyCount = 0;
+						}
 					}
 				}
-						
-				if(delBlobKeyString.length() == 0){
-					return;
+				if(delBlobKeyString.length() > 0){
+					httpReq = new HTTPRequest(new URL(serverlink + "/info"),HTTPMethod.POST,com.google.appengine.api.urlfetch.FetchOptions.Builder.withDeadline(60));
+					param = new StringBuilder();
+					param.append("type=");
+					param.append(URLEncoder.encode("userdelblob","UTF-8"));
+					param.append("&");
+					param.append("serverkey=");
+					param.append(URLEncoder.encode(Sec.ServerKey,"UTF-8"));
+					param.append("&");
+					param.append("delblobkeylist=");
+					param.append(URLEncoder.encode(delBlobKeyString.substring(0,delBlobKeyString.length() - 1),"UTF-8"));
+					param.append("&");
+					param.append("delblobsize=");
+					param.append(URLEncoder.encode(String.valueOf(delBlobSize),"UTF-8"));
+					httpReq.setPayload(param.toString().getBytes("UTF-8"));
+					respList.add(us.fetchAsync(httpReq));
 				}
 						
 				idenValue = ms.getIdentifiable("user_DelBlobIndex_" + serverlink);
@@ -160,13 +215,9 @@ public class TaskServlet extends HttpServlet{
 					ms.putIfUntouched("user_DelBlobIndex_" + serverlink,idenValue,idenValue.getValue());
 				}
 				
-				httpReq = new HTTPRequest(new URL(serverlink + "/info"),HTTPMethod.POST,com.google.appengine.api.urlfetch.FetchOptions.Builder.withDeadline(60));
-				param = "type=" + URLEncoder.encode("userdelblob","UTF-8") + "&" +
-						"serverkey=" + URLEncoder.encode(Sec.ServerKey,"UTF-8") + "&" +
-						"delblobkeylist=" + URLEncoder.encode(delBlobKeyString.substring(0,delBlobKeyString.length() - 1),"UTF-8") + "&" +
-						"delblobsize=" + URLEncoder.encode(String.valueOf(delBlobSize),"UTF-8");
-				httpReq.setPayload(param.getBytes("UTF-8"));
-				us.fetch(httpReq);
+				for(index = 0;index < respList.size();index++){
+					respList.get(index).get();
+				}
 			}
 		}catch(Exception e){
 			log.log(Level.WARNING,"Error",e);

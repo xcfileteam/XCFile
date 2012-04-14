@@ -76,18 +76,18 @@ public class DownloadServlet extends HttpServlet{
 				}
 				
 				if(fileObj.filesize <= 8388608L){
-					serverLink = fileObj.serverlist.getValue();
+					serverLink = fileObj.serverlist;
 					if(serverLink.equals("http://" + req.getServerName()) == true){
 						resp.setContentType("application/octet-stream");
-						retData(fileObj.blobkeylist.getValue(),resp.getOutputStream());
+						retData(fileObj.blobkeylist,resp.getOutputStream());
 					}else{
-						resp.sendRedirect(serverLink + "/down/" + fileObj.filename + "?blobkey=" + fileObj.blobkeylist.getValue());
+						resp.sendRedirect(serverLink + "/down/" + fileObj.filename + "?blobkey=" + fileObj.blobkeylist);
 					}
 				}else{
 					req.setAttribute("filename",fileObj.filename);
 					req.setAttribute("filesize",String.valueOf(fileObj.filesize));
-					req.setAttribute("serverlist",fileObj.serverlist.getValue());
-					req.setAttribute("blobkeylist",fileObj.blobkeylist.getValue());
+					req.setAttribute("serverlist",fileObj.serverlist);
+					req.setAttribute("blobkeylist",fileObj.blobkeylist);
 					this.getServletContext().getRequestDispatcher("/down.jsp").forward(req,resp);
 				}
 			}

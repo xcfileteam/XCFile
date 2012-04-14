@@ -1,7 +1,5 @@
 package fileapp;
 
-import indexapp.ListObj;
-
 import java.io.*;
 import com.google.appengine.api.datastore.*;
 
@@ -9,37 +7,52 @@ public class FileObj implements Comparable<FileObj>,Serializable{
 	private static final long serialVersionUID = 1L;
 	
 	public String fileid;
+	public Long timestamp;
+	public String userid;
+	public Text metadata;
 	public String filename;
 	public Long filesize;
-	public Long timestamp;
-	public Text serverlist;
-	public Text blobkeylist;
-	public String userid;
+	public String serverlist;
+	public String blobkeylist;
 	
 	public void getDB(Entity entity){
+		String[] partMetaData;
+		
 		this.fileid = (String)entity.getProperty("fileid");
-		this.filename = (String)entity.getProperty("filename");
-		this.filesize = (Long)entity.getProperty("filesize");
 		this.timestamp = (Long)entity.getProperty("timestamp");
-		this.serverlist = (Text)entity.getProperty("serverlist");
-		this.blobkeylist = (Text)entity.getProperty("blobkeylist");
 		this.userid = (String)entity.getProperty("userid");
+		this.metadata = (Text)entity.getProperty("metadata");
+		
+		partMetaData = this.metadata.getValue().split("\\|");
+		
+		this.filename = partMetaData[0];
+		this.filesize = Long.valueOf(partMetaData[1]);
+		this.serverlist = partMetaData[2];
+		this.blobkeylist = partMetaData[3];
 	}
-	
+
 	public void putDB(DatastoreService ds){
 		Key key;
 		Entity entity;
+		StringBuilder metadata;
 		
 		key = KeyFactory.createKey("FileObjGroup",1L);
 		entity = new Entity("FileObj",key);
-		
+
 		entity.setProperty("fileid",this.fileid);
-		entity.setProperty("filename",this.filename);
-		entity.setProperty("filesize",this.filesize);
 		entity.setProperty("timestamp",this.timestamp);
-		entity.setProperty("serverlist",this.serverlist);
-		entity.setProperty("blobkeylist",this.blobkeylist);
 		entity.setProperty("userid",this.userid);
+		
+		metadata = new StringBuilder();
+		metadata.append(this.filename);
+		metadata.append("|");
+		metadata.append(String.valueOf(this.filesize));
+		metadata.append("|");
+		metadata.append(String.valueOf(this.serverlist));
+		metadata.append("|");
+		metadata.append(String.valueOf(this.blobkeylist));
+		
+		entity.setProperty("metadata",new Text(metadata.toString()));
 		
 		ds.put(entity);
 	}
