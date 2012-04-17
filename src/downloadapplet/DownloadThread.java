@@ -9,6 +9,8 @@ import java.util.concurrent.*;
 
 import javax.swing.*;
 
+import commonapplet.Pair;
+
 public class DownloadThread extends SwingWorker<Void,Void>{
 	public static final long PART_SIZE = 8388608L;
 	
@@ -23,7 +25,7 @@ public class DownloadThread extends SwingWorker<Void,Void>{
 	private BlockingQueue<Runnable> threadQueue;
 	private ThreadPoolExecutor threadPool;
 	private Long progSize;
-	private Long startTime; 
+	private LinkedList<Pair<Long,Long>> progQueue;
 	
 	public DownloadThread(File file,Long filesize,List<String> serverlist,List<String> blobkeylist){
 		try{
@@ -38,6 +40,7 @@ public class DownloadThread extends SwingWorker<Void,Void>{
 			threadQueue = new LinkedBlockingQueue<Runnable>();
 			threadPool = new ThreadPoolExecutor(10,Integer.MAX_VALUE,Long.MAX_VALUE,TimeUnit.HOURS,threadQueue);
 			progSize = 0L;
+			progQueue = new LinkedList<Pair<Long,Long>>();
 		}catch(Exception e){
 			e.printStackTrace();
 		}
@@ -48,12 +51,41 @@ public class DownloadThread extends SwingWorker<Void,Void>{
 	}
 	
 	private boolean updateLoop() throws Exception{
-		Long nowTime;
-
-		nowTime = new Date().getTime();
-		if((nowTime - startTime) > 0){
-			DownloadApplet.updateProg(((double)progSize / (double)filesize) * 100.0,progSize / (nowTime - startTime) * 1000L);
+		Long startTime;
+		Long endTime;
+		boolean tweakFlag;
+		Long nowSpeed;
+		int coreSize;
+		
+		progQueue.add(new Pair<Long,Long>(new Date().getTime(),progSize));
+		endTime = progQueue.getLast().first;
+		tweakFlag = false;
+		while(true){
+			startTime = progQueue.getFirst().first;
+			
+			if(progQueue.size() == 2){
+				break;
+			}
+			if((endTime - startTime) >= 5000){
+				progQueue.poll();
+				tweakFlag = true;
+			}else{
+				break;
+			}
 		}
+		nowSpeed = (progQueue.getLast().second - progQueue.getFirst().second) / (endTime - startTime) * 1000L;
+			
+		if(tweakFlag == true){
+			coreSize = threadPool.getCorePoolSize();
+			
+			if(nowSpeed >= 307200L * (long)coreSize){
+				threadPool.setCorePoolSize(coreSize + 1);
+			}else if(nowSpeed < 307200L * (long)(coreSize - 1)){
+				threadPool.setCorePoolSize(coreSize - 1);
+			}
+		}
+		
+		DownloadApplet.updateProg(((double)progSize / (double)filesize) * 100.0,nowSpeed);
 	
 		if(cancelflag == true){
 			threadPool.shutdownNow();
@@ -99,7 +131,7 @@ public class DownloadThread extends SwingWorker<Void,Void>{
 				delayTime = 200;
 			}
 			
-			startTime = new Date().getTime();
+			progQueue.add(new Pair<Long,Long>(new Date().getTime(),progSize));
 			while(offset < filesize){
 				if((filesize - offset) < partSize){
 					partSize = filesize - offset;

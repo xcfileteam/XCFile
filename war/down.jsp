@@ -5,7 +5,7 @@
 <html>
 	<head>
 		<meta http-equiv="content-type" content="text/html; charset=UTF-8">
-		<title>XC File Lab</title>
+		<title>XC File檔案分享空間</title>
 	</head>
 	
 	<link rel="stylesheet" type="text/css" href="flatbutton.css" />

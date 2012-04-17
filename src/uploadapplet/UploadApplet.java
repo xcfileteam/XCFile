@@ -42,7 +42,7 @@ public class UploadApplet extends JApplet implements ActionListener{
 			}
 			
 			uploadCount = 0;
-			threadPool = Executors.newFixedThreadPool(5);
+			threadPool = Executors.newFixedThreadPool(1);
 			queueUpload = new LinkedBlockingQueue<UploadThread>();
 			mapUpload = new HashMap<Integer,UploadThread>();
 			

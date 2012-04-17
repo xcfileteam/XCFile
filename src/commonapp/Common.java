@@ -3,14 +3,14 @@ package commonapp;
 import java.net.*;
 
 public class Common{
-	public static final String ListServer = "http://xcfilelab.appspot.com";
+	public static final String ListServer = "http://xcfilespace.appspot.com";
 	
 	public static Long ServerNameToId(String name){
 		int index;
 		Long id;
 		char[] array;
 		
-		array = name.split("xcfilelab")[1].toCharArray();
+		array = name.split("xcfile")[1].toCharArray();
 		id = 0L;
 		for(index = 0;index < array.length;index++){
 			id *= 256L;

@@ -7,6 +7,7 @@ import java.net.*;
 import java.util.*;
 import java.util.concurrent.*;
 import javax.swing.*;
+import commonapplet.*;
 
 public class UploadThread extends SwingWorker<Void,Void>{
 	public static final long PART_SIZE = 8388608L;
@@ -26,7 +27,7 @@ public class UploadThread extends SwingWorker<Void,Void>{
 	private BlockingQueue<Runnable> threadQueue;
 	private ThreadPoolExecutor threadPool;
 	private Long progSize;
-	private Long startTime; 
+	private LinkedList<Pair<Long,Long>> progQueue;
 	
 	public UploadThread(int itemid,File file){
 		try{
@@ -42,8 +43,9 @@ public class UploadThread extends SwingWorker<Void,Void>{
 			fileChannel = RAF.getChannel();
 			serverList = new ArrayList<String>();
 			threadQueue = new LinkedBlockingQueue<Runnable>();
-			threadPool = new ThreadPoolExecutor(10,Integer.MAX_VALUE,Long.MAX_VALUE,TimeUnit.HOURS,threadQueue);
+			threadPool = new ThreadPoolExecutor(1,Integer.MAX_VALUE,Long.MAX_VALUE,TimeUnit.HOURS,threadQueue);
 			progSize = 0L;
+			progQueue = new LinkedList<Pair<Long,Long>>();
 		}catch(Exception e){
 			e.printStackTrace();
 		}
@@ -150,12 +152,40 @@ public class UploadThread extends SwingWorker<Void,Void>{
 		outb.close();
 	}
 	private boolean updateLoop() throws Exception{
-		Long nowTime;
-
-		nowTime = new Date().getTime();
-		if((nowTime - startTime) > 0){
-			UploadApplet.updateProg(itemid,((double)progSize / (double)file.length()) * 100.0,progSize / (nowTime - startTime) * 1000L);
+		Long startTime;
+		Long endTime;
+		boolean tweakFlag;
+		Long nowSpeed;
+		int coreSize;
+		
+		progQueue.add(new Pair<Long,Long>(new Date().getTime(),progSize));
+		endTime = progQueue.getLast().first;
+		tweakFlag = false;
+		while(true){
+			startTime = progQueue.getFirst().first;
+			
+			if(progQueue.size() == 2){
+				break;
+			}
+			if((endTime - startTime) >= 5000){
+				progQueue.poll();
+				tweakFlag = true;
+			}else{
+				break;
+			}
 		}
+		nowSpeed = (progQueue.getLast().second - progQueue.getFirst().second) / (endTime - startTime) * 1000L;
+		
+		if(tweakFlag == true){
+			coreSize = threadPool.getCorePoolSize();
+			if(nowSpeed >= 307200L * (long)coreSize){
+				threadPool.setCorePoolSize(coreSize + 1);
+			}else if(nowSpeed < 307200L * (long)(coreSize - 1)){
+				threadPool.setCorePoolSize(coreSize - 1);
+			}
+		}
+		
+		UploadApplet.updateProg(itemid,((double)progSize / (double)file.length()) * 100.0,nowSpeed);
 		
 		if(cancelflag == true){
 			threadPool.shutdownNow();
@@ -199,13 +229,13 @@ public class UploadThread extends SwingWorker<Void,Void>{
 			offset = 0L;
 			
 			threadCount = 0;
-			if((partSize / PART_SIZE) * serverList.size() > 10){
+			if((partSize / PART_SIZE) * serverList.size() > 5){
 				delayTime = 2000;
 			}else{
 				delayTime = 200;
 			}
 			
-			startTime = new Date().getTime();
+			progQueue.add(new Pair<Long,Long>(new Date().getTime(),progSize));
 			while(offset < fileSize){
 				if((fileSize - offset) < partSize){
 					partSize = fileSize - offset;
@@ -225,7 +255,7 @@ public class UploadThread extends SwingWorker<Void,Void>{
 					}
 					
 					threadCount++;
-					if(threadCount <= 10){
+					if(threadCount <= 5){
 						Thread.sleep(delayTime);
 					}
 					

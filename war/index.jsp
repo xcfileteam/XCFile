@@ -38,7 +38,7 @@
 <html>
 	<head>
 		<meta http-equiv="content-type" content="text/html; charset=UTF-8">
-		<title>XC File Lab</title>
+		<title>XC File檔案分享空間</title>
 	</head>
 	
 	<link rel="stylesheet" type="text/css" href="flatbutton.css" />
@@ -86,8 +86,6 @@
 			e_div_uploadlist = $('div_uploadlist');	
 			e_div_uploaditem_ori = $('div_uploaditem_ori');
 			uploadCount = 0;
-		
-			//loginflag=true;
 			
 			if(loginflag == true){
 				e_div_upload.style.visibility = 'hidden';
@@ -103,10 +101,6 @@
 				
 				userGetFilelist();
 			}
-			
-			/*for(index=0;index<25;index++){
-				userCreateItem('sdfdsf','02595_oiawindmills_19werewewr20x108fdg0.jpg',1023*1024,new Date().getTime(),'http://xcfilelabd.appspot.com/down/rtR73Bx4/02595_oiawindmills_1920x1080.jpg');
-			}*/
 		}
 		function resize(){
 			e_div_mask.style.height = window.innerHeight + 'px';

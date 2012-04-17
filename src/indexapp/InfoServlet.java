@@ -13,9 +13,7 @@ import commonapp.*;
 public class InfoServlet extends HttpServlet{
 	private static final Logger log = Logger.getLogger(InfoServlet.class.getName());
 	
-	public void doPost(HttpServletRequest req,HttpServletResponse resp) throws IOException{
-		int index;
-		
+	public void doPost(HttpServletRequest req,HttpServletResponse resp) throws IOException{	
 		DatastoreService ds;
 		MemcacheService ms;
 		
@@ -24,13 +22,10 @@ public class InfoServlet extends HttpServlet{
 		int retry;
 		Entity entity;
 		ListObj listObj;
-		List<ListObj> listObjList;
 		
 		String type;
 		String name;
 		Long value;
-		IdentifiableValue identyValue;
-		
 		resp.setContentType("text/plain");
 		
 		try{
@@ -59,19 +54,7 @@ public class InfoServlet extends HttpServlet{
 						
 						txn.commit();
 						
-						identyValue = ms.getIdentifiable("cache_ListObj");
-						if(identyValue != null){
-							listObjList = (List<ListObj>)identyValue.getValue();
-							for(index = 0;index < listObjList.size();index++){
-								if(listObjList.get(index).link.equals(listObj.link) == true){
-									listObjList.get(index).storesize = listObj.storesize;
-									Collections.sort(listObjList);
-									ms.putIfUntouched("cache_ListObj",identyValue,listObjList);
-									break;
-								}
-							}
-						}
-						
+						ms.put("cache_ListObj_" + listObj.link,listObj);
 						break;
 					}catch(ConcurrentModificationException e){
 						retry--;

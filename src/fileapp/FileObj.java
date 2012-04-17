@@ -23,7 +23,7 @@ public class FileObj implements Comparable<FileObj>,Serializable{
 		this.userid = (String)entity.getProperty("userid");
 		this.metadata = (Text)entity.getProperty("metadata");
 		
-		partMetaData = this.metadata.getValue().split("\\|");
+		partMetaData = this.metadata.getValue().split("<>");
 		
 		this.filename = partMetaData[0];
 		this.filesize = Long.valueOf(partMetaData[1]);
@@ -45,11 +45,11 @@ public class FileObj implements Comparable<FileObj>,Serializable{
 		
 		metadata = new StringBuilder();
 		metadata.append(this.filename);
-		metadata.append("|");
+		metadata.append("<>");
 		metadata.append(String.valueOf(this.filesize));
-		metadata.append("|");
+		metadata.append("<>");
 		metadata.append(String.valueOf(this.serverlist));
-		metadata.append("|");
+		metadata.append("<>");
 		metadata.append(String.valueOf(this.blobkeylist));
 		
 		entity.setProperty("metadata",new Text(metadata.toString()));
