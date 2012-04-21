@@ -6,9 +6,7 @@ import java.nio.channels.*;
 import java.net.*;
 import java.util.*;
 import java.util.concurrent.*;
-
 import javax.swing.*;
-
 import commonapplet.Pair;
 
 public class DownloadThread extends SwingWorker<Void,Void>{
@@ -24,7 +22,10 @@ public class DownloadThread extends SwingWorker<Void,Void>{
 	private RandomAccessFile RAF;
 	private BlockingQueue<Runnable> threadQueue;
 	private ThreadPoolExecutor threadPool;
-	private Long progSize;
+	private Long netSize;
+	private Long realSize;
+	private double progNum;
+	private boolean tweakFlag;
 	private LinkedList<Pair<Long,Long>> progQueue;
 	
 	public DownloadThread(File file,Long filesize,List<String> serverlist,List<String> blobkeylist){
@@ -38,37 +39,44 @@ public class DownloadThread extends SwingWorker<Void,Void>{
 			RAF = new RandomAccessFile(file,"rw");
 			fileChannel = RAF.getChannel();
 			threadQueue = new LinkedBlockingQueue<Runnable>();
-			threadPool = new ThreadPoolExecutor(10,Integer.MAX_VALUE,Long.MAX_VALUE,TimeUnit.HOURS,threadQueue);
-			progSize = 0L;
+			threadPool = new ThreadPoolExecutor(2,Integer.MAX_VALUE,Long.MAX_VALUE,TimeUnit.HOURS,threadQueue);
+			netSize = 0L;
+			realSize = 0L;
+			progNum = 0.0;
+			tweakFlag = false;
 			progQueue = new LinkedList<Pair<Long,Long>>();
 		}catch(Exception e){
 			e.printStackTrace();
 		}
 	}
 	
-	public synchronized void updateProg(int len){
-		progSize += len;
+	public synchronized void incNetSize(int len){
+		netSize += len;
+	}
+	public synchronized void incRealSize(long len){
+		realSize += len;
 	}
 	
 	private boolean updateLoop() throws Exception{
+		Long prevNetSize;
+		Long deltaNetSize;
 		Long startTime;
 		Long endTime;
-		boolean tweakFlag;
 		Long nowSpeed;
 		int coreSize;
 		
-		progQueue.add(new Pair<Long,Long>(new Date().getTime(),progSize));
+		prevNetSize = progQueue.getLast().second;
+		progQueue.add(new Pair<Long,Long>(new Date().getTime(),netSize));
+		deltaNetSize = progQueue.getLast().second - prevNetSize;
 		endTime = progQueue.getLast().first;
-		tweakFlag = false;
 		while(true){
 			startTime = progQueue.getFirst().first;
 			
 			if(progQueue.size() == 2){
 				break;
 			}
-			if((endTime - startTime) >= 5000){
+			if((endTime - startTime) >= 10000){
 				progQueue.poll();
-				tweakFlag = true;
 			}else{
 				break;
 			}
@@ -78,14 +86,21 @@ public class DownloadThread extends SwingWorker<Void,Void>{
 		if(tweakFlag == true){
 			coreSize = threadPool.getCorePoolSize();
 			
-			if(nowSpeed >= 307200L * (long)coreSize){
+			if(nowSpeed >= 102400L * (long)coreSize){
 				threadPool.setCorePoolSize(coreSize + 1);
-			}else if(nowSpeed < 307200L * (long)(coreSize - 1)){
+			}else if(nowSpeed < 102400L * (long)(coreSize - 1)){
 				threadPool.setCorePoolSize(coreSize - 1);
 			}
 		}
 		
-		DownloadApplet.updateProg(((double)progSize / (double)filesize) * 100.0,nowSpeed);
+		if(filesize > realSize){
+			progNum += (100.0 - progNum) / (double)(filesize - realSize) * (double)deltaNetSize;
+			DownloadApplet.updateProg(progNum,nowSpeed);
+			
+			incRealSize(deltaNetSize);
+		}else{
+			DownloadApplet.updateProg(100.0,nowSpeed);
+		}
 	
 		if(cancelflag == true){
 			threadPool.shutdownNow();
@@ -125,13 +140,13 @@ public class DownloadThread extends SwingWorker<Void,Void>{
 			blobkeyIndex = 0;
 			
 			threadCount = 0;
-			if((partSize / PART_SIZE) * serverlist.size() > 10){
+			if((partSize / PART_SIZE) * serverlist.size() > 2){
 				delayTime = 2000;
 			}else{
 				delayTime = 200;
 			}
 			
-			progQueue.add(new Pair<Long,Long>(new Date().getTime(),progSize));
+			progQueue.add(new Pair<Long,Long>(new Date().getTime(),netSize));
 			while(offset < filesize){
 				if((filesize - offset) < partSize){
 					partSize = filesize - offset;
@@ -153,7 +168,7 @@ public class DownloadThread extends SwingWorker<Void,Void>{
 					blobkeyIndex++;
 					
 					threadCount++;
-					if(threadCount <= 10){
+					if(threadCount <= 2){
 						Thread.sleep(delayTime);
 					}
 					
@@ -164,8 +179,9 @@ public class DownloadThread extends SwingWorker<Void,Void>{
 				offset += partSize;
 			}
 			
+			tweakFlag = true;
 			while(updateLoop() == true){
-				Thread.sleep(500);
+				Thread.sleep(1000);
 			}
 			
 			fileChannel.close();
@@ -205,14 +221,20 @@ class PartThread extends SwingWorker<Void,Void>{
 		ReadableByteChannel rbc;
 		FileChannel fc;
 	
+		int rollbackRealSize;
 		String param;
 		long nowOffset;
+		int subLimit;
+		int readSize;
 		int rl;
 		ByteBuffer fbuf;
 		int resCode;
 		
+		rollbackRealSize = 0;
 		retry = 8;
 		while(retry > 0 && this.isCancelled() == false){
+			downloadThread.incRealSize(-rollbackRealSize);
+			rollbackRealSize = 0;
 			try{
 				conn = (HttpURLConnection)new URL(serverlink + "/download").openConnection();
 				conn.setRequestMethod("POST");
@@ -230,22 +252,37 @@ class PartThread extends SwingWorker<Void,Void>{
 				if(resCode == 200){
 					rbc = Channels.newChannel(conn.getInputStream());
 					fc = downloadThread.fileChannel;
-					fbuf = ByteBuffer.allocateDirect(131072);
+					fbuf = ByteBuffer.allocateDirect(524288);
 					nowOffset = offset;
 					while((nowOffset - offset) < partsize){	
 						fbuf.clear();
-						rl = rbc.read(fbuf);
-						if(rl == -1){
-							break;
+						readSize = 0;
+						subLimit = 0;
+						while(subLimit < 524288){
+							subLimit = Math.min(subLimit + 65536,524288);
+							fbuf.limit(subLimit);
+							
+							rl = 0;
+							while(fbuf.hasRemaining() == true){
+								rl = rbc.read(fbuf);
+								if(rl == -1){
+									break;
+								}
+								downloadThread.incNetSize(rl);
+								rollbackRealSize += rl;
+								readSize += rl;
+							}
+							if(rl == -1){
+								break;
+							}
 						}
 						fbuf.flip();
-						
+
 						while(fbuf.hasRemaining() == true){
 							fc.write(fbuf,nowOffset);
 						}
-						
-						downloadThread.updateProg(rl);
-						nowOffset += rl;
+
+						nowOffset += readSize;
 					}
 					rbc.close();
 					
@@ -258,6 +295,9 @@ class PartThread extends SwingWorker<Void,Void>{
 				}
 			}catch(ClosedChannelException e){
 				break;
+			}catch(UnknownHostException e){
+				e.printStackTrace();
+				Thread.sleep(2000);
 			}catch(Exception e){
 				e.printStackTrace();
 			}

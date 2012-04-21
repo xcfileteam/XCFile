@@ -3,7 +3,7 @@ package commonapp;
 import java.net.*;
 
 public class Common{
-	public static final String ListServer = "http://xcfilespace.appspot.com";
+	public static final String ListServer = "http://xcfilelab.appspot.com";
 	
 	public static Long ServerNameToId(String name){
 		int index;
