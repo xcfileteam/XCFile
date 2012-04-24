@@ -141,22 +141,23 @@ public class UploadServlet extends HttpServlet{
 	}
 	
 	public String readLine(InputStream in) throws IOException{
-		StringBuilder ret;
-		int c;
+		int index;
+		byte[] ret;
 		
-		ret = new StringBuilder();
+		ret = new byte[4096];
+		index = 0;
 		while(true){
-			c = in.read();
-			if(c == -1){
+			ret[index] = (byte)in.read();
+			if(ret[index] == -1){
 				return null;
 			}
-			if(c == '\n'){
+			if(ret[index] == '\n'){
 				break;
-			}else if(c != '\r'){
-				ret.append((char)c);
+			}else if(ret[index] != '\r'){
+				index++;
 			}
 		}
 		
-		return ret.toString();
+		return new String(ret,0,index,"UTF-8");
 	}
 }

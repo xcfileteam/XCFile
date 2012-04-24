@@ -6,6 +6,8 @@ import java.nio.channels.*;
 import java.net.*;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicLong;
+
 import javax.swing.*;
 import commonapplet.Pair;
 
@@ -14,6 +16,8 @@ public class DownloadThread extends SwingWorker<Void,Void>{
 	
 	public boolean cancelflag;
 	public FileChannel fileChannel;
+	public AtomicLong netSize;
+	public AtomicLong realSize;
 	
 	private File file;
 	private Long filesize;
@@ -22,8 +26,6 @@ public class DownloadThread extends SwingWorker<Void,Void>{
 	private RandomAccessFile RAF;
 	private BlockingQueue<Runnable> threadQueue;
 	private ThreadPoolExecutor threadPool;
-	private Long netSize;
-	private Long realSize;
 	private double progNum;
 	private boolean tweakFlag;
 	private LinkedList<Pair<Long,Long>> progQueue;
@@ -40,8 +42,8 @@ public class DownloadThread extends SwingWorker<Void,Void>{
 			fileChannel = RAF.getChannel();
 			threadQueue = new LinkedBlockingQueue<Runnable>();
 			threadPool = new ThreadPoolExecutor(2,Integer.MAX_VALUE,Long.MAX_VALUE,TimeUnit.HOURS,threadQueue);
-			netSize = 0L;
-			realSize = 0L;
+			netSize = new AtomicLong(0L);
+			realSize = new AtomicLong(0L);
 			progNum = 0.0;
 			tweakFlag = false;
 			progQueue = new LinkedList<Pair<Long,Long>>();
@@ -50,23 +52,18 @@ public class DownloadThread extends SwingWorker<Void,Void>{
 		}
 	}
 	
-	public synchronized void incNetSize(int len){
-		netSize += len;
-	}
-	public synchronized void incRealSize(long len){
-		realSize += len;
-	}
-	
 	private boolean updateLoop() throws Exception{
 		Long prevNetSize;
 		Long deltaNetSize;
+		Long currRealSize;
 		Long startTime;
 		Long endTime;
 		Long nowSpeed;
 		int coreSize;
 		
 		prevNetSize = progQueue.getLast().second;
-		progQueue.add(new Pair<Long,Long>(new Date().getTime(),netSize));
+		currRealSize = realSize.get();
+		progQueue.add(new Pair<Long,Long>(new Date().getTime(),netSize.get()));
 		deltaNetSize = progQueue.getLast().second - prevNetSize;
 		endTime = progQueue.getLast().first;
 		while(true){
@@ -93,11 +90,11 @@ public class DownloadThread extends SwingWorker<Void,Void>{
 			}
 		}
 		
-		if(filesize > realSize){
-			progNum += (100.0 - progNum) / (double)(filesize - realSize) * (double)deltaNetSize;
+		if(filesize > currRealSize){
+			progNum += (100.0 - progNum) / (double)(filesize - currRealSize) * (double)deltaNetSize;
 			DownloadApplet.updateProg(progNum,nowSpeed);
 			
-			incRealSize(deltaNetSize);
+			realSize.addAndGet(deltaNetSize);
 		}else{
 			DownloadApplet.updateProg(100.0,nowSpeed);
 		}
@@ -146,7 +143,7 @@ public class DownloadThread extends SwingWorker<Void,Void>{
 				delayTime = 200;
 			}
 			
-			progQueue.add(new Pair<Long,Long>(new Date().getTime(),netSize));
+			progQueue.add(new Pair<Long,Long>(new Date().getTime(),netSize.get()));
 			while(offset < filesize){
 				if((filesize - offset) < partSize){
 					partSize = filesize - offset;
@@ -221,25 +218,28 @@ class PartThread extends SwingWorker<Void,Void>{
 		ReadableByteChannel rbc;
 		FileChannel fc;
 	
-		int rollbackRealSize;
+		int deltaRealSize;
 		String param;
 		long nowOffset;
 		int subLimit;
 		int readSize;
+		int writeSize;
 		int rl;
 		ByteBuffer fbuf;
 		int resCode;
 		
-		rollbackRealSize = 0;
+		deltaRealSize = 0;
 		retry = 8;
 		while(retry > 0 && this.isCancelled() == false){
-			downloadThread.incRealSize(-rollbackRealSize);
-			rollbackRealSize = 0;
+			downloadThread.realSize.addAndGet(-deltaRealSize);
+			deltaRealSize = 0;
 			try{
 				conn = (HttpURLConnection)new URL(serverlink + "/download").openConnection();
 				conn.setRequestMethod("POST");
 				conn.setDoOutput(true);
 				conn.setDoInput(true);
+				conn.setConnectTimeout(60000);
+				conn.setReadTimeout(60000);
 				conn.setRequestProperty("Cache-Control","no-cache,max-age=0");
 				conn.setRequestProperty("Pragma","no-cache");
 				
@@ -256,37 +256,36 @@ class PartThread extends SwingWorker<Void,Void>{
 					nowOffset = offset;
 					while((nowOffset - offset) < partsize){	
 						fbuf.clear();
-						readSize = 0;
 						subLimit = 0;
 						while(subLimit < 524288){
 							subLimit = Math.min(subLimit + 65536,524288);
 							fbuf.limit(subLimit);
-							
+							readSize = 0;
 							rl = 0;
 							while(fbuf.hasRemaining() == true){
 								rl = rbc.read(fbuf);
 								if(rl == -1){
 									break;
 								}
-								downloadThread.incNetSize(rl);
-								rollbackRealSize += rl;
 								readSize += rl;
 							}
+							downloadThread.netSize.addAndGet(readSize);
+							deltaRealSize += readSize;
+							
 							if(rl == -1){
 								break;
 							}
 						}
 						fbuf.flip();
 
+						writeSize = 0;
 						while(fbuf.hasRemaining() == true){
-							fc.write(fbuf,nowOffset);
+							writeSize += fc.write(fbuf,nowOffset);
 						}
 
-						nowOffset += readSize;
+						nowOffset += writeSize;
 					}
 					rbc.close();
-					
-					break;
 				}
 				outb.close();
 				
@@ -300,9 +299,8 @@ class PartThread extends SwingWorker<Void,Void>{
 				Thread.sleep(2000);
 			}catch(Exception e){
 				e.printStackTrace();
+				retry--;
 			}
-			
-			retry--;
 		}
 		
 		return null;

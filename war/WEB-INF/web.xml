@@ -44,7 +44,7 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 	
 	<servlet>
 		<servlet-name>InfoServlet</servlet-name>
-		<servlet-class>indexapp.InfoServlet</servlet-class>
+		<servlet-class>fileapp.InfoServlet</servlet-class>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>InfoServlet</servlet-name>
@@ -60,7 +60,7 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 			<role-name>admin</role-name>
 		</auth-constraint>
 	</security-constraint>
-<!--
+
 	<servlet>
 		<servlet-name>TaskServlet</servlet-name>
 		<servlet-class>fileapp.TaskServlet</servlet-class>
@@ -79,7 +79,7 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 			<role-name>admin</role-name>
 		</auth-constraint>
 	</security-constraint>
--->
+
 	<welcome-file-list>
 		<welcome-file>index.jsp</welcome-file>
 	</welcome-file-list>

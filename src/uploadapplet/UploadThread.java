@@ -6,6 +6,7 @@ import java.nio.channels.*;
 import java.net.*;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.*;
 import javax.swing.*;
 import commonapplet.*;
 
@@ -20,14 +21,14 @@ public class UploadThread extends SwingWorker<Void,Void>{
 	public String fileseckey;
 	public Map<Long,String> blobkeyMap;
 	public FileChannel fileChannel;
+	public AtomicLong netSize;
+	public AtomicLong realSize;
 	
 	private String filename;
 	private RandomAccessFile RAF;
 	private List<String> serverList;
 	private BlockingQueue<Runnable> threadQueue;
 	private ThreadPoolExecutor threadPool;
-	private Long netSize;
-	private Long realSize;
 	private double progNum;
 	private boolean tweakFlag;
 	private LinkedList<Pair<Long,Long>> progQueue;
@@ -47,21 +48,14 @@ public class UploadThread extends SwingWorker<Void,Void>{
 			serverList = new ArrayList<String>();
 			threadQueue = new LinkedBlockingQueue<Runnable>();
 			threadPool = new ThreadPoolExecutor(2,Integer.MAX_VALUE,Long.MAX_VALUE,TimeUnit.HOURS,threadQueue);
-			netSize = 0L;
-			realSize = 0L;
+			netSize = new AtomicLong(0L);
+			realSize = new AtomicLong(0L);
 			progNum = 0.0;
 			tweakFlag = false;
 			progQueue = new LinkedList<Pair<Long,Long>>();
 		}catch(Exception e){
 			e.printStackTrace();
 		}
-	}
-	
-	public synchronized void incNetSize(int len){
-		netSize += len;
-	}
-	public synchronized void incRealSize(long len){
-		realSize += len;
 	}
 	
 	private void getList(Long filesize) throws Exception{
@@ -163,13 +157,15 @@ public class UploadThread extends SwingWorker<Void,Void>{
 	private boolean updateLoop() throws Exception{
 		Long prevNetSize;
 		Long deltaNetSize;
+		Long currRealSize;
 		Long startTime;
 		Long endTime;
 		Long nowSpeed;
 		int coreSize;
 		
 		prevNetSize = progQueue.getLast().second;
-		progQueue.add(new Pair<Long,Long>(new Date().getTime(),netSize));
+		currRealSize = realSize.get();
+		progQueue.add(new Pair<Long,Long>(new Date().getTime(),netSize.get()));
 		deltaNetSize = progQueue.getLast().second - prevNetSize;
 		endTime = progQueue.getLast().first;
 		while(true){
@@ -195,11 +191,11 @@ public class UploadThread extends SwingWorker<Void,Void>{
 			}
 		}
 		
-		if(file.length() > realSize){
-			progNum += (100.0 - progNum) / (double)(file.length() - realSize) * (double)deltaNetSize;
+		if(file.length() > currRealSize){
+			progNum += (100.0 - progNum) / (double)(file.length() - currRealSize) * (double)deltaNetSize;
 			UploadApplet.updateProg(itemid,progNum,nowSpeed);
 			
-			incRealSize(deltaNetSize);
+			realSize.addAndGet(deltaNetSize);
 		}else{
 			UploadApplet.updateProg(itemid,100.0,nowSpeed);
 		}
@@ -252,7 +248,7 @@ public class UploadThread extends SwingWorker<Void,Void>{
 				delayTime = 200;
 			}
 			
-			progQueue.add(new Pair<Long,Long>(new Date().getTime(),netSize));
+			progQueue.add(new Pair<Long,Long>(new Date().getTime(),netSize.get()));
 			while(offset < fileSize){
 				if((fileSize - offset) < partSize){
 					partSize = fileSize - offset;
@@ -326,7 +322,7 @@ class PartThread extends SwingWorker<Void,Void>{
 		FileChannel fc;
 		BufferedReader reader;
 		
-		int rollbackRealSize;
+		int deltaRealSize;
 		StringBuilder header;
 		byte[] byteHeader;
 		Long nowSize;
@@ -337,16 +333,18 @@ class PartThread extends SwingWorker<Void,Void>{
 		ByteBuffer fbuf;
 		int resCode;
 		
-		rollbackRealSize = 0;
+		deltaRealSize = 0;
 		retry = 8;
 		while(retry > 0 && this.isCancelled() == false){
-			uploadThread.incRealSize(-rollbackRealSize);
-			rollbackRealSize = 0;
-			try{			
+			uploadThread.realSize.addAndGet(-deltaRealSize);
+			deltaRealSize = 0;
+			try{		
 				conn = (HttpURLConnection)new URL(serverlink + "/upload").openConnection();
 				conn.setRequestMethod("POST");
 				conn.setDoOutput(true);
 				conn.setDoInput(true);
+				conn.setConnectTimeout(60000);
+				conn.setReadTimeout(60000);
 				conn.setRequestProperty("Cache-Control","no-cache,max-age=0");
 				conn.setRequestProperty("Pragma","no-cache");
 				conn.setRequestProperty("Content-Type","application/octet-stream");
@@ -380,19 +378,20 @@ class PartThread extends SwingWorker<Void,Void>{
 					
 					subLimit = 0;
 					while(subLimit < readSize){
-						subLimit = Math.min(subLimit + 32768,readSize);
+						subLimit = Math.min(subLimit + 65536,readSize);
 						fbuf.limit(subLimit);
+						writeSize = 0;
 						while(fbuf.hasRemaining() == true){
-							writeSize = wbc.write(fbuf);
-							uploadThread.incNetSize(writeSize);
-							rollbackRealSize += writeSize;
+							writeSize += wbc.write(fbuf);
 						}
+						uploadThread.netSize.addAndGet(writeSize);
+						deltaRealSize += writeSize;
 					}
 					
 					nowSize += readSize;
 					nowOffset += readSize;
 				}
-
+				
 				resCode = conn.getResponseCode();
 				if(resCode == 200){
 					reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
@@ -405,16 +404,14 @@ class PartThread extends SwingWorker<Void,Void>{
 					break;
 				}
 			}catch(ClosedChannelException e){
-				e.printStackTrace();
 				break;
 			}catch(UnknownHostException e){
 				e.printStackTrace();
 				Thread.sleep(2000);
 			}catch(Exception e){
 				e.printStackTrace();
+				retry--;
 			}
-			
-			retry--;
 		}
 		
 		return null;
