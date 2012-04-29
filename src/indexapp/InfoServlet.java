@@ -52,9 +52,9 @@ public class InfoServlet extends HttpServlet{
 						listObj.storesize += value;
 						listObj.putDB(ds,txn,entity);
 						
-						txn.commit();
-						
 						ms.put("cache_ListObj_" + listObj.link,listObj);
+						
+						txn.commit();
 						break;
 					}catch(ConcurrentModificationException e){
 						retry--;

@@ -106,12 +106,15 @@ function uploadUpdateProg(itemid,progvalue,speed){
 }
 function uploadShowLink(itemid,fileid,filesize,link){
 	var e_div_uploaditem;
-	
+	var fileObj;
+
 	e_div_uploaditem = $('div_uploaditem_' + itemid);
 	e_div_uploaditem.link = link;
 	e_div_uploaditem.e_input_link.value = link;
 	
 	if(loginflag == true){
-		userCreateItem(fileid,e_div_uploaditem.filename,filesize,new Date().getTime(),e_div_uploaditem.link);
+		e_div_user_fileitem = userCreateFileItem(fileid,e_div_uploaditem.filename,filesize,new Date().getTime(),e_div_uploaditem.link);
+		fileObj = e_div_user_fileitem.fileobj;
+		fileMap[fileObj.fileid] = fileObj;
 	}
 }

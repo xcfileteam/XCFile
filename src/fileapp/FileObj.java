@@ -34,7 +34,7 @@ public class FileObj implements Comparable<FileObj>,Serializable{
 	public void putDB(DatastoreService ds){
 		Key key;
 		Entity entity;
-		StringBuilder metadata;
+		StringBuilder metadataString;
 		
 		key = KeyFactory.createKey("FileObjGroup",1L);
 		entity = new Entity("FileObj",key);
@@ -43,25 +43,45 @@ public class FileObj implements Comparable<FileObj>,Serializable{
 		entity.setProperty("timestamp",this.timestamp);
 		entity.setProperty("userid",this.userid);
 		
-		metadata = new StringBuilder();
-		metadata.append(this.filename);
-		metadata.append("<>");
-		metadata.append(String.valueOf(this.filesize));
-		metadata.append("<>");
-		metadata.append(String.valueOf(this.serverlist));
-		metadata.append("<>");
-		metadata.append(String.valueOf(this.blobkeylist));
+		metadataString = new StringBuilder();
+		metadataString.append(this.filename);
+		metadataString.append("<>");
+		metadataString.append(String.valueOf(this.filesize));
+		metadataString.append("<>");
+		metadataString.append(String.valueOf(this.serverlist));
+		metadataString.append("<>");
+		metadataString.append(String.valueOf(this.blobkeylist));
 		
-		entity.setProperty("metadata",new Text(metadata.toString()));
+		entity.setProperty("metadata",new Text(metadataString.toString()));
 		
 		ds.put(entity);
+	}
+	public void putDB(DatastoreService ds,Transaction txn,Entity entity){
+		StringBuilder metadataString;
+
+		entity.setProperty("fileid",this.fileid);
+		entity.setProperty("timestamp",this.timestamp);
+		entity.setProperty("userid",this.userid);
+		
+		metadataString = new StringBuilder();
+		metadataString.append(this.filename);
+		metadataString.append("<>");
+		metadataString.append(String.valueOf(this.filesize));
+		metadataString.append("<>");
+		metadataString.append(String.valueOf(this.serverlist));
+		metadataString.append("<>");
+		metadataString.append(String.valueOf(this.blobkeylist));
+		
+		entity.setProperty("metadata",new Text(metadataString.toString()));
+		
+		ds.put(txn,entity);
 	}
 	
 	@Override
 	public int compareTo(FileObj obj){
 		if(this.timestamp == obj.timestamp){
 			return 0;
-		}else if(this.timestamp > obj.timestamp){
+		}else if(this.timestamp < obj.timestamp){
 			return -1;
 		}else{
 			return 1;

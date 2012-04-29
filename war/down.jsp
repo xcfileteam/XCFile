@@ -5,7 +5,7 @@
 <html>
 	<head>
 		<meta http-equiv="content-type" content="text/html; charset=UTF-8">
-		<title>XC File檔案分享空間</title>
+		<title>XC File Lab</title>
 	</head>
 	
 	<link rel="stylesheet" type="text/css" href="flatbutton.css" />
@@ -103,7 +103,7 @@
 						<script type="text/javascript" src="http://www.java.com/js/deployJava.js"></script>
 					    <script type="text/javascript">
 					    	var attributes = {code:'downloadapplet.DownloadApplet',id:'DownloadApplet',width:100,height:50};
-							var parameters = {'jnlp_href':'../../downloadapplet.jnlp',
+							var parameters = {'jnlp_href':'../../downloadappletlab1.jnlp',
 											'filename':filename,
 											'filesize':filesize,
 											'serverlist':'<%= (String)request.getAttribute("serverlist") %>',

@@ -44,7 +44,7 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 	
 	<servlet>
 		<servlet-name>InfoServlet</servlet-name>
-		<servlet-class>fileapp.InfoServlet</servlet-class>
+		<servlet-class>indexapp.InfoServlet</servlet-class>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>InfoServlet</servlet-name>
