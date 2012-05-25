@@ -6,83 +6,79 @@
 	<head>
 		<meta http-equiv="content-type" content="text/html; charset=UTF-8">
 		<title>XC File Lab</title>
+	
+		<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/prototype/1.7.0.0/prototype.js"></script>
+		<script type="text/javascript">
+			var filename = decodeURIComponent("<%= (String)request.getAttribute("filename")%>");	//Use "" for URI
+			var filesize = '<%= (String)request.getAttribute("filesize")%>';
+		
+			var e_div_progvalue;
+			var e_div_progtext;
+			var e_div_speed;
+		
+			function init(){
+				var size
+				var num;
+				
+				e_div_progvalue = $("div_progvalue");
+				e_div_progtext = $("div_progtext");
+				e_div_speed = $("div_speed");
+				
+				document.getElementsByName('input_name')[0].value = filename;
+				
+				size = parseInt(filesize,10);
+				if(size >= 1073741824){
+					num = new Number(size / 1073741824.0);
+					size = num.toFixed(1) + 'GB';
+				}else if(size >= 1048576){
+					num = new Number(size / 1048576);
+					size = num.toFixed(1) + 'MB';
+				}else if(size >= 1024){
+					num = new Number(size / 1024);
+					size = num.toFixed(1) + 'KB';
+				}else{
+					size = size + 'B';
+				}
+				$('div_size').childNodes[0].nodeValue = size;
+			}
+			
+			function updateState(state){
+				if(state == 'init'){
+					e_div_progvalue.style.width = '0%';
+					e_div_progtext.childNodes[0].nodeValue = '等待中';
+					e_div_speed.childNodes[0].nodeValue = ' ';
+				}else if(state == 'done'){
+					$('DownloadApplet').style.display = 'none';
+					e_div_progvalue.style.width = '100%';
+					e_div_progtext.childNodes[0].nodeValue = '下載完成';
+					e_div_speed.childNodes[0].nodeValue = ' ';
+				}
+			}
+			function updateProg(progvalue,speed){
+				if(progvalue > 100.0){
+					progvalue = 100.0;
+				}
+				
+				num = new Number(progvalue);
+				e_div_progvalue.style.width = num.toFixed(0) + '%';
+				e_div_progtext.childNodes[0].nodeValue = num.toFixed(1) + '%';
+			
+				if(speed >= 1073741824){
+					num = new Number(speed / 1073741824.0);
+					speed = num.toFixed(1) + 'GB/s';
+				}else if(speed >= 1048576){
+					num = new Number(speed / 1048576);
+					speed = num.toFixed(1) + 'MB/s';
+				}else if(speed >= 1024){
+					num = new Number(speed / 1024);
+					speed = num.toFixed(1) + 'KB/s';
+				}else{
+					speed = speed + 'B/s';
+				}
+				e_div_speed.childNodes[0].nodeValue = speed;
+			}
+		</script>
 	</head>
-	
-	<link rel="stylesheet" type="text/css" href="flatbutton.css" />
-	
-	<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/prototype/1.7.0.0/prototype.js"></script>
-	<script type="text/javascript">
-		var filename = decodeURIComponent("<%= (String)request.getAttribute("filename")%>");	//Use "" for URI
-		var filesize = '<%= (String)request.getAttribute("filesize")%>';
-	
-		var e_div_progvalue;
-		var e_div_progtext;
-		var e_div_speed;
-	
-		function init(){
-			var size
-			var num;
-			
-			e_div_progvalue = $("div_progvalue");
-			e_div_progtext = $("div_progtext");
-			e_div_speed = $("div_speed");
-			
-			document.getElementsByName('input_name')[0].value = filename;
-			
-			size = parseInt(filesize,10);
-			if(size >= 1073741824){
-				num = new Number(size / 1073741824.0);
-				size = num.toFixed(1) + 'GB';
-			}else if(size >= 1048576){
-				num = new Number(size / 1048576);
-				size = num.toFixed(1) + 'MB';
-			}else if(size >= 1024){
-				num = new Number(size / 1024);
-				size = num.toFixed(1) + 'KB';
-			}else{
-				size = size + 'B';
-			}
-			$('div_size').childNodes[0].nodeValue = size;
-		}
-		
-		function updateState(state){
-			if(state == 'init'){
-				e_div_progvalue.style.width = '0%';
-				e_div_progtext.childNodes[0].nodeValue = '等待中';
-				e_div_speed.childNodes[0].nodeValue = ' ';
-			}else if(state == 'download'){
-				$('table_prog').style.display = '';
-			}else if(state == 'done'){
-				$('DownloadApplet').style.display = 'none';
-				e_div_progvalue.style.width = '100%';
-				e_div_progtext.childNodes[0].nodeValue = '下載完成';
-				e_div_speed.childNodes[0].nodeValue = ' ';
-			}
-		}
-		function updateProg(progvalue,speed){
-			if(progvalue > 100.0){
-				progvalue = 100.0;
-			}
-			
-			num = new Number(progvalue);
-			e_div_progvalue.style.width = num.toFixed(0) + '%';
-			e_div_progtext.childNodes[0].nodeValue = num.toFixed(1) + '%';
-		
-			if(speed >= 1073741824){
-				num = new Number(speed / 1073741824.0);
-				speed = num.toFixed(1) + 'GB/s';
-			}else if(speed >= 1048576){
-				num = new Number(speed / 1048576);
-				speed = num.toFixed(1) + 'MB/s';
-			}else if(speed >= 1024){
-				num = new Number(speed / 1024);
-				speed = num.toFixed(1) + 'KB/s';
-			}else{
-				speed = speed + 'B/s';
-			}
-			e_div_speed.childNodes[0].nodeValue = speed;
-		}
-	</script>
 	
 	<body style="margin:0px;" onload="init();">
 		<div style="margin:10px 10px 0px 10px;"><a href="http://xcfilelab.appspot.com"><img border=0 src="../../xcfilelabbar.png"/></a></div>

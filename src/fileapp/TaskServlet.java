@@ -18,15 +18,7 @@ import commonapp.Pair;
 @SuppressWarnings("serial")
 public class TaskServlet extends HttpServlet{
 	private static final Logger log = Logger.getLogger(TaskServlet.class.getName());
-	public static final long PART_SIZE = 8388608L;
-	
-	public void doOptions(HttpServletRequest req,HttpServletResponse resp) throws IOException{
-		resp.addHeader("Access-Control-Allow-Origin","*");
-		resp.addHeader("Access-Control-Allow-Headers","Origin,X-Prototype-Version,X-Requested-With,Content-type,Accept");
-		resp.addHeader("Access-Control-Allow-Methods","POST");
-		resp.addHeader("Access-Control-Max-Age","3628800");
-	}
-		
+
 	public void doPost(HttpServletRequest req,HttpServletResponse resp) throws IOException{
 		int index;
 		int subIndex;
@@ -54,7 +46,6 @@ public class TaskServlet extends HttpServlet{
 		StringBuilder delBlobKeyString;
 		List<Future<HTTPResponse>> respList;
 		
-		resp.addHeader("Access-Control-Allow-Origin","*");
 		resp.setContentType("text/plain");
 		
 		try{
@@ -68,15 +59,10 @@ public class TaskServlet extends HttpServlet{
 				ms.delete("task_State_BlobInc");
 				
 				newValue = (Long)ms.get("state_BlobInc");
-				oldValue = (Long)ms.get("state_BlobInc_Old");
-				
 				if(newValue == null){
-					ms.delete("state_BlobInc_Old");
 					return;
-				}else if(oldValue == null){
-					oldValue = 0L;
 				}
-				ms.put("state_BlobInc_Old",newValue);
+				ms.increment("state_BlobInc",-newValue);
 				
 				idenValue = ms.getIdentifiable("state_BlobInc");
 				if(idenValue != null){
@@ -92,25 +78,20 @@ public class TaskServlet extends HttpServlet{
 				param.append(URLEncoder.encode(Sec.ServerKey,"UTF-8"));
 				param.append("&");
 				param.append("name=");
-				param.append(URLEncoder.encode(serverName.split(".appspot.com")[0],"UTF-8"));
+				param.append(URLEncoder.encode(serverName,"UTF-8"));
 				param.append("&");
 				param.append("value=");
-				param.append(URLEncoder.encode(String.valueOf(newValue - oldValue),"UTF-8"));
+				param.append(URLEncoder.encode(String.valueOf(newValue),"UTF-8"));
 				httpReq.setPayload(param.toString().getBytes("UTF-8"));
 				us.fetch(httpReq);
 			}else if(type.equals("stateblobdec") == true){
 				ms.delete("task_State_BlobDec");
 				
 				newValue = (Long)ms.get("state_BlobDec");
-				oldValue = (Long)ms.get("state_BlobDec_Old");
-				
 				if(newValue == null){
-					ms.delete("state_BlobDec_Old");
 					return;
-				}else if(oldValue == null){
-					oldValue = 0L;
 				}
-				ms.put("state_BlobDec_Old",newValue);
+				ms.increment("state_BlobDec",-newValue);
 				
 				idenValue = ms.getIdentifiable("state_BlobDec");
 				if(idenValue != null){
@@ -126,30 +107,33 @@ public class TaskServlet extends HttpServlet{
 				param.append(URLEncoder.encode(Sec.ServerKey,"UTF-8"));
 				param.append("&");
 				param.append("name=");
-				param.append(URLEncoder.encode(serverName.split(".appspot.com")[0],"UTF-8"));
+				param.append(URLEncoder.encode(serverName,"UTF-8"));
 				param.append("&");
 				param.append("value=");
-				param.append(URLEncoder.encode(String.valueOf(-(newValue - oldValue)),"UTF-8"));
+				param.append(URLEncoder.encode(String.valueOf(-newValue),"UTF-8"));
 				httpReq.setPayload(param.toString().getBytes("UTF-8"));
 				us.fetch(httpReq);
 			}else if(type.equals("userdeltask") == true){
 				serverlink = req.getParameter("serverlink");
-				
 				ms.delete("task_User_DelBlob_" + serverlink);
-				newValue = (Long)ms.get("user_DelBlobIndex_" + serverlink);
-				oldValue = (Long)ms.get("user_DelBlobIndex_Old_" + serverlink);
+				
+				msKey = "user_DelBlobIndex_" + serverlink;
+				newValue = (Long)ms.get(msKey);
+				if(newValue == null){
+					return;
+				}
+				oldValue = (newValue >>> 32L);
+				newValue &= 0xFFFFFFFFL;
+				ms.increment(msKey,((newValue - oldValue) << 32L));
+				
+				idenValue = ms.getIdentifiable(msKey);
+				if(idenValue != null){
+					ms.putIfUntouched(msKey,idenValue,idenValue.getValue());
+				}
 				
 				Thread.sleep(50);	//Wait put user_DelBlobList
-				
-				if(newValue == null){
-					ms.delete("user_DelBlobIndex_Old_" + serverlink);
-					return;
-				}else if(oldValue == null){
-					oldValue = 0L;
-				}
-				ms.put("user_DelBlobIndex_Old_" + serverlink,newValue);
 							
-				msKey = "user_DelBlobList_" + serverlink;
+				msKey = "user_DelBlobList_" + serverlink + "_";
 				delBlobListKey = new ArrayList<String>();
 				for(;oldValue < newValue;oldValue++){
 					delBlobListKey.add(msKey + String.valueOf(oldValue));
@@ -208,11 +192,6 @@ public class TaskServlet extends HttpServlet{
 					param.append(URLEncoder.encode(String.valueOf(delBlobSize),"UTF-8"));
 					httpReq.setPayload(param.toString().getBytes("UTF-8"));
 					respList.add(us.fetchAsync(httpReq));
-				}
-						
-				idenValue = ms.getIdentifiable("user_DelBlobIndex_" + serverlink);
-				if(idenValue != null){
-					ms.putIfUntouched("user_DelBlobIndex_" + serverlink,idenValue,idenValue.getValue());
 				}
 				
 				for(index = 0;index < respList.size();index++){

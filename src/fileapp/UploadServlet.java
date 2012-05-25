@@ -20,6 +20,8 @@ public class UploadServlet extends HttpServlet{
 	private static final Logger log = Logger.getLogger(UploadServlet.class.getName());
 	
 	public void doPost(HttpServletRequest req,HttpServletResponse resp) throws IOException{
+		String msKey;
+		
 		DatastoreService ds;
 		MemcacheService ms;
 		FileService fs;
@@ -40,7 +42,7 @@ public class UploadServlet extends HttpServlet{
 		String userid;
 		FileObj fileObj;
 		IdentifiableValue idenValue;
-		List<FileObj> userFileObjList;
+		List<String> userFileCacheKey;
 		
 		Long partsize;
 		AppEngineFile file;
@@ -95,14 +97,15 @@ public class UploadServlet extends HttpServlet{
 				ms.put("cache_FileObj_" + fileObj.fileid,fileObj);
 				
 				if(userid != null){
+					msKey = "user_FileCacheKey_" + userid;
 					while(true){
-						idenValue = ms.getIdentifiable("cache_UserFileObjList_" + userid);
+						idenValue = ms.getIdentifiable(msKey);
 						if(idenValue == null){
 							break;
 						}
-						userFileObjList = (List<FileObj>)idenValue.getValue();
-						userFileObjList.add(fileObj);
-						if(ms.putIfUntouched("cache_UserFileObjList_" + userid,idenValue,userFileObjList) == true){
+						userFileCacheKey = (List<String>)idenValue.getValue();
+						userFileCacheKey.add("cache_FileObj_" + fileObj.fileid);
+						if(ms.putIfUntouched(msKey,idenValue,userFileCacheKey) == true){
 							break;
 						}
 					}
@@ -115,7 +118,7 @@ public class UploadServlet extends HttpServlet{
 
 				file = fs.createNewBlobFile("application/octet-stream",fileid);
 				fWriter = fs.openWriteChannel(file,true);
-				fbuf = new byte[524288];
+				fbuf = new byte[8388608];
 				len = partsize;
 				while(len > 0){
 					rl = inb.read(fbuf);
@@ -128,8 +131,8 @@ public class UploadServlet extends HttpServlet{
 				fWriter.closeFinally();
 
 				ms.increment("state_BlobInc",partsize - len,0L);
-				if(ms.put("task_State_BlobInc",true,Expiration.byDeltaSeconds(610),SetPolicy.ADD_ONLY_IF_NOT_PRESENT) == true){
-					taskqueue.add(TaskOptions.Builder.withUrl("/task").method(Method.POST).param("type","stateblobinc").countdownMillis(600000));
+				if(ms.put("task_State_BlobInc",true,Expiration.byDeltaSeconds(70),SetPolicy.ADD_ONLY_IF_NOT_PRESENT) == true){
+					taskqueue.add(TaskOptions.Builder.withUrl("/task").method(Method.POST).param("type","stateblobinc").countdownMillis(60000));
 				}
 				
 				resp.getWriter().print(fs.getBlobKey(file).getKeyString());
@@ -144,7 +147,7 @@ public class UploadServlet extends HttpServlet{
 		int index;
 		byte[] ret;
 		
-		ret = new byte[4096];
+		ret = new byte[8388608];
 		index = 0;
 		while(true){
 			ret[index] = (byte)in.read();

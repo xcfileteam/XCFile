@@ -100,6 +100,7 @@
 				e_div_taginfo_setbutton = $('div_taginfo_setbutton');
 				e_div_taginfo_delbutton = $('div_taginfo_delbutton');
 				
+				e_input_user_checkall = $('input_user_checkall');
 				e_div_user_filelist = $('div_user_filelist');
 				e_div_user_fileitem_ori = $('div_user_fileitem_ori');
 				e_div_fileinfo = $('div_fileinfo');
@@ -317,6 +318,10 @@
 							this.style.backgroundColor='';
 						"
 						onclick="
+							if(event.target != this.e_input_check){
+								this.e_input_check.checked = !this.e_input_check.checked;
+							}
+							this.e_input_check.parentNode.style.backgroundColor = '';
 						">
 							<table style="width:100%; height:24px; border-collapse:collapse;">
 								<colgroup>
@@ -324,9 +329,7 @@
 									<col style="width:auto;"/>
 								</colgroup>
 								<tr>
-									<td><div style="width:23px; height:23px;"><input type="checkbox" onchange="
-										this.parentNode.style.backgroundColor = '';
-									"/></div></td>
+									<td><div style="width:23px; height:23px;"><input type="checkbox"/></div></td>
 									<td><div style="width:100%; color:#36454F; font-size:16px; font-weight:bold;"></div></td>
 								</tr>
 							</table>
@@ -366,11 +369,15 @@
 							<div id="div_user_tagitem_ori" style="border-bottom:solid 1px #D9D9D9; display:none;"
 							onmouseover="
 								this.style.backgroundColor='#F6F6F6';
-								this.e_div_operbutton.style.display = '';
+								if(this.e_div_operbutton != null){
+									this.e_div_operbutton.style.display = '';
+								}
 							"
 							onmouseout="
 								this.style.backgroundColor='';
-								this.e_div_operbutton.style.display = 'none';
+								if(this.e_div_operbutton != null){
+									this.e_div_operbutton.style.display = 'none';
+								}
 							"
 							onclick="
 								if(event.target != this.e_div_operbutton){
@@ -416,11 +423,15 @@
 								<col style="width:auto;"/>
 							</colgroup>
 							<tr>
-								<td><input type="checkbox" onclick="
+								<td><input id="input_user_checkall" type="checkbox" onclick="
 									var fileid;
+									var fileObj;
 								
 									for(fileid in fileMap){
-										fileMap[fileid].e_div_user_fileitem.e_input_check.checked = this.checked;
+										fileObj = fileMap[fileid];
+										if(fileObj.e_div_user_fileitem.style.display == ''){
+											fileObj.e_div_user_fileitem.e_input_check.checked = this.checked;
+										}
 									}
 								"/></td>
 								<td>
@@ -464,7 +475,7 @@
 													if(tagcountmap[e_div_fileinfo_tagitem.tagname] == fileCount){
 														e_div_fileinfo_tagitem.e_div_state.style.backgroundColor = '';
 													}else{
-														e_div_fileinfo_tagitem.e_div_state.style.backgroundColor = '#D9D9D9';
+														e_div_fileinfo_tagitem.e_div_state.style.backgroundColor = '#848482';
 													}
 												}else{
 													e_div_fileinfo_tagitem.e_input_check.checked = false;
@@ -502,6 +513,16 @@
 						onmouseout="
 							this.style.backgroundColor='';
 							this.e_div_oper.style.display = 'none';
+						"
+						onclick="
+							var index;
+						
+							for(index = 0;index < this.clickignore.length;index++){
+								if(event.target == this.clickignore[index]){
+									return;
+								}
+							}
+							this.e_input_check.checked = !this.e_input_check.checked;
 						">
 							<table style="width:100%; height:50px; border-collapse:collapse;">
 								<colgroup>
@@ -514,7 +535,7 @@
 								<tr>
 									<td><input type="checkbox"/></td>
 									<td><div style="width:100%; font-size:12px;"></div></td>
-									<td><div style="width:100%;"><a target="_blank" style="color:#36454F; font-size:12px; font-weight:bold;"></a><span style="margin:0px 0px 0px 5px; color:#D9D9D9; font-size:12px; font-weight:bold;"></span></div></td>
+									<td><div style="width:100%;"><a target="_blank" style="color:#36454F; font-size:12px; font-weight:bold;"></a><span style="margin:0px 0px 0px 5px; color:#848482; font-size:12px; font-weight:bold;"></span></div></td>
 									<td><div style="width:100%; font-size:12px; text-align:right;"></div></td>
 									<td><div style="width:150px; margin:0px 10px 0px auto; display:none;">
 										<div class="button_b" style="float:right;" onclick="

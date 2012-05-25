@@ -32,6 +32,7 @@ public class InfoServlet extends HttpServlet{
 	
 	public void doPost(HttpServletRequest req,HttpServletResponse resp) throws IOException{
 		int index;
+		String msKey;
 
 		DatastoreService ds;
 		MemcacheService ms;
@@ -52,18 +53,17 @@ public class InfoServlet extends HttpServlet{
 		String userseckey;
 		String userid;
 		
-		TagObj tagObj;
-		Map<String,Object> userTagObjMap;
-		List<String> userTagNameList;
-		Map<String,Object> userTagNameMap; 
-		String delTagObjKeyString;
-		TagObj[] userTagObjArray;
-		
 		FileObj fileObj;
+		List<String> userFileCacheKey;
 		Map<String,Object> userFileObjMap;
-		List<String> userFileIdList;
-		Map<String,Object> userFileIdMap;
 		FileObj[] userFileObjArray;
+		List<FileObj> userFileObjList;
+		
+		TagObj tagObj;
+		List<String> userTagCacheKey;
+		Map<String,Object> userTagObjMap;
+		TagObj[] userTagObjArray;
+		List<TagObj> userTagObjList;
 		
 		String fileid;
 		String[] serverList;
@@ -77,7 +77,6 @@ public class InfoServlet extends HttpServlet{
 		Long delBlobIndex;
 		
 		String filename;
-		
 		String tagname;
 		String newtagname;
 		String fileidlist;
@@ -103,38 +102,46 @@ public class InfoServlet extends HttpServlet{
 					throw new Exception("User Wrong");
 				}
 				
-				userFileObjMap = (Map<String,Object>)ms.get("cache_UserFileObjMap_" + userid);
+				userFileCacheKey = (List<String>)ms.get("user_FileCacheKey_" + userid);
+				userFileObjMap = null;
+				if(userFileCacheKey != null){
+					userFileObjMap = ms.getAll(userFileCacheKey);
+					if(userFileObjMap.size() < userFileCacheKey.size()){
+						userFileObjMap = null;
+					}
+				}
+				
 				if(userFileObjMap == null){
 					key = KeyFactory.createKey("FileObjGroup",1L);
 					q = new Query("FileObj",key);
 					q.addFilter("userid",FilterOperator.EQUAL,userid);
-					q.addSort("userid");
-					q.addSort("timestamp",SortDirection.DESCENDING);
 					entityList = ds.prepare(q).asList(com.google.appengine.api.datastore.FetchOptions.Builder.withLimit(4096));
 
+					userFileCacheKey = new ArrayList<String>();
 					userFileObjMap = new HashMap<String,Object>();
 					for(index = 0;index < entityList.size();index++){
 						fileObj = new FileObj();
 						fileObj.getDB(entityList.get(index));
-						userFileObjMap.put(fileObj.fileid,fileObj);
+						
+						msKey = "cache_FileObj_" + fileObj.fileid;
+						userFileCacheKey.add(msKey);
+						userFileObjMap.put(msKey,fileObj);
 					}
-					ms.put("cache_UserFileObjMap_" + userid,userFileObjMap);
+					ms.putAll(userFileObjMap);
+					ms.put("user_FileCacheKey_" + userid,userFileCacheKey);
 				}
 				
 				userFileObjArray = userFileObjMap.values().toArray(new FileObj[userFileObjMap.size()]);
-				Arrays.sort(userFileObjArray);
-				
-				userFileIdList = new ArrayList<String>();
+				userFileObjList = new ArrayList<FileObj>();
 				for(index = 0;index < userFileObjArray.length;index++){
-					userFileIdList.add("user_DelFileID_" + userFileObjArray[index].fileid);
-				}
-
-				userFileIdMap = ms.getAll(userFileIdList);				
-				for(index = 0;index < userFileObjArray.length;index++){
-					fileObj = userFileObjArray[index];
-					if(userFileIdMap.containsKey("user_DelFileID_" + fileObj.fileid) == true){
-						continue;
+					if(userFileObjArray[index] != null){
+						userFileObjList.add(userFileObjArray[index]);
 					}
+				}
+				Collections.sort(userFileObjList);
+								
+				for(index = 0;index < userFileObjList.size();index++){
+					fileObj = userFileObjList.get(index);
 					
 					resp.getWriter().println(fileObj.fileid);
 					resp.getWriter().println(fileObj.filename);
@@ -145,37 +152,46 @@ public class InfoServlet extends HttpServlet{
 				
 				resp.getWriter().println("<-->");
 				
-				userTagObjMap = (Map<String,Object>)ms.get("cache_UserTagObjMap_" + userid);
+				userTagCacheKey = (List<String>)ms.get("user_TagCacheKey_" + userid);
+				userTagObjMap = null;
+				if(userTagCacheKey != null){
+					userTagObjMap = ms.getAll(userTagCacheKey);
+					if(userTagObjMap.size() < userTagCacheKey.size()){
+						userTagObjMap = null;
+					}
+				}
+				
 				if(userTagObjMap == null){
 					key = KeyFactory.createKey("TagObjGroup",1L);
 					q = new Query("TagObj",key);
 					q.addFilter("userid",FilterOperator.EQUAL,userid);
 					entityList = ds.prepare(q).asList(com.google.appengine.api.datastore.FetchOptions.Builder.withLimit(4096));
 					
+					userTagCacheKey = new ArrayList<String>();
 					userTagObjMap = new HashMap<String,Object>();
 					for(index = 0;index < entityList.size();index++){
 						tagObj = new TagObj();
 						tagObj.getDB(entityList.get(index));
-						userTagObjMap.put(tagObj.tagname,tagObj);
+						
+						msKey = "cache_TagObj_" + userid + "_" + tagObj.tagname;
+						userTagCacheKey.add(msKey);
+						userTagObjMap.put(msKey,tagObj);
 					}
-					ms.put("cache_UserTagObjMap_" + userid,userTagObjMap);
+					ms.putAll(userTagObjMap);
+					ms.put("user_TagCacheKey_" + userid,userTagCacheKey);
 				}
 				
 				userTagObjArray = userTagObjMap.values().toArray(new TagObj[userTagObjMap.size()]);
-				Arrays.sort(userTagObjArray);
-				
-				userTagNameList = new ArrayList<String>();
-				delTagObjKeyString = "user_DelTagName_" + userid + "_";
+				userTagObjList = new ArrayList<TagObj>();
 				for(index = 0;index < userTagObjArray.length;index++){
-					userTagNameList.add(delTagObjKeyString + userTagObjArray[index].tagname);
-				}
-				
-				userTagNameMap = ms.getAll(userTagNameList);				
-				for(index = 0;index < userTagObjArray.length;index++){
-					tagObj = userTagObjArray[index];
-					if(userTagNameMap.containsKey(delTagObjKeyString + tagObj.tagname) == true){
-						continue;
+					if(userTagObjArray[index] != null){
+						userTagObjList.add(userTagObjArray[index]);
 					}
+				}
+				Collections.sort(userTagObjList);
+						
+				for(index = 0;index < userTagObjList.size();index++){
+					tagObj = userTagObjList.get(index);
 					
 					resp.getWriter().println(tagObj.tagname);
 					resp.getWriter().println(tagObj.fileidlist);
@@ -202,8 +218,7 @@ public class InfoServlet extends HttpServlet{
 				fileObj.getDB(entity);
 				
 				ds.delete(entity.getKey());
-				ms.delete("cache_FileObj_" + fileid);
-				ms.put("user_DelFileID_" + fileid,true);
+				ms.put("cache_FileObj_" + fileid,null);
 				
 				serverList = fileObj.serverlist.split("\\|");
 				blobkeyList = fileObj.blobkeylist.split("\\|");
@@ -228,11 +243,11 @@ public class InfoServlet extends HttpServlet{
 						blobkeyIndex++;
 					}
 					
-					delBlobIndex = ms.increment("user_DelBlobIndex_" + serverList[index],1L,0L);
-					ms.put("user_DelBlobList_" + serverList[index] + String.valueOf(delBlobIndex - 1),new Pair<List<String>,Long>(delBlobKeyList,partSize));
+					delBlobIndex = (ms.increment("user_DelBlobIndex_" + serverList[index],1L,0L) & 0xFFFFFFFFL) - 1L;
+					ms.put("user_DelBlobList_" + serverList[index] + "_" + String.valueOf(delBlobIndex),new Pair<List<String>,Long>(delBlobKeyList,partSize));
 					
-					if(ms.put("task_User_DelBlob_" + serverList[index],true,Expiration.byDeltaSeconds(310),SetPolicy.ADD_ONLY_IF_NOT_PRESENT) == true){
-						taskqueue.add(TaskOptions.Builder.withUrl("/task").method(Method.POST).param("type","userdeltask").param("serverlink",serverList[index]).countdownMillis(300000));
+					if(ms.put("task_User_DelBlob_" + serverList[index],true,Expiration.byDeltaSeconds(70),SetPolicy.ADD_ONLY_IF_NOT_PRESENT) == true){
+						taskqueue.add(TaskOptions.Builder.withUrl("/task").method(Method.POST).param("type","userdeltask").param("serverlink",serverList[index]).countdownMillis(60000));
 					}
 					
 					index = (index + 1) % serverList.length;
@@ -255,8 +270,8 @@ public class InfoServlet extends HttpServlet{
 				}
 				
 				ms.increment("state_BlobDec",Long.valueOf(req.getParameter("delblobsize")),0L);
-				if(ms.put("task_State_BlobDec",true,Expiration.byDeltaSeconds(610),SetPolicy.ADD_ONLY_IF_NOT_PRESENT) == true){
-					taskqueue.add(TaskOptions.Builder.withUrl("/task").method(Method.POST).param("type","stateblobdec").countdownMillis(600000));
+				if(ms.put("task_State_BlobDec",true,Expiration.byDeltaSeconds(70),SetPolicy.ADD_ONLY_IF_NOT_PRESENT) == true){
+					taskqueue.add(TaskOptions.Builder.withUrl("/task").method(Method.POST).param("type","stateblobdec").countdownMillis(60000));
 				}
 			}else if(type.equals("usersetfile") == true){
 				taskqueue = QueueFactory.getQueue("user");
@@ -290,15 +305,16 @@ public class InfoServlet extends HttpServlet{
 						
 						txn.commit();
 						
+						msKey = "cache_FileObj_" + fileObj.fileid;
 						while(true){
-							idenValue = ms.getIdentifiable("cache_UserFileObjMap_" + userid);
-							if(idenValue == null){
-								break;
-							}
-							userFileObjMap = (Map<String,Object>)idenValue.getValue();
-							userFileObjMap.put(fileObj.fileid,fileObj);
-							if(ms.putIfUntouched("cache_UserFileObjMap_" + userid,idenValue,userFileObjMap) == true){
-								break;
+							idenValue = ms.getIdentifiable(msKey);
+							if(idenValue != null){
+								if(idenValue.getValue() == null){
+									break;
+								}
+								if(ms.putIfUntouched(msKey,idenValue,fileObj) == true){
+									break;
+								}
 							}
 						}
 						
@@ -322,6 +338,14 @@ public class InfoServlet extends HttpServlet{
 				
 				tagname = Common.EncodeURI(req.getParameter("tagname"));
 				
+				key = KeyFactory.createKey("TagObjGroup",1L);
+				q = new Query("TagObj",key);
+				q.addFilter("tagname",FilterOperator.EQUAL,tagname);
+				q.addFilter("userid",FilterOperator.EQUAL,userid);
+				if(ds.prepare(q).asSingleEntity() != null){
+					throw new Exception("TagName Duplicate");
+				}
+				
 				tagObj = new TagObj();
 				tagObj.userid = userid;
 				tagObj.tagname = tagname;
@@ -329,14 +353,16 @@ public class InfoServlet extends HttpServlet{
 				tagObj.fileidlist = "";
 				tagObj.putDB(ds);
 				
+				msKey = "cache_TagObj_" + userid + "_" + tagObj.tagname;
+				ms.put(msKey,tagObj);
 				while(true){
-					idenValue = ms.getIdentifiable("cache_UserTagObjMap_" + userid);
+					idenValue = ms.getIdentifiable("user_TagCacheKey_" + userid);
 					if(idenValue == null){
 						break;
 					}
-					userTagObjMap = (Map<String,Object>)idenValue.getValue();
-					userTagObjMap.put(tagObj.tagname,tagObj);
-					if(ms.putIfUntouched("cache_UserTagObjMap_" + userid,idenValue,userTagObjMap) == true){
+					userTagCacheKey = (List<String>)idenValue.getValue();
+					userTagCacheKey.add(msKey);
+					if(ms.putIfUntouched("user_TagCacheKey_" + userid,idenValue,userTagCacheKey) == true){
 						break;
 					}
 				}
@@ -356,19 +382,9 @@ public class InfoServlet extends HttpServlet{
 				q.addFilter("tagname",FilterOperator.EQUAL,tagname);
 				q.addFilter("userid",FilterOperator.EQUAL,userid);
 				key = ds.prepare(q).asSingleEntity().getKey();		
-				ds.delete(key);
 				
-				while(true){
-					idenValue = ms.getIdentifiable("cache_UserTagObjMap_" + userid);
-					if(idenValue == null){
-						break;
-					}
-					userTagObjMap = (Map<String,Object>)idenValue.getValue();
-					userTagObjMap.remove(tagname);
-					if(ms.putIfUntouched("cache_UserTagObjMap_" + userid,idenValue,userTagObjMap) == true){
-						break;
-					}
-				}
+				ds.delete(key);
+				ms.put("cache_TagObj_" + userid + "_" + tagname,null);
 			}else if(type.equals("usersettag") == true){
 				usersecid = req.getParameter("usersecid");
 				userseckey = req.getParameter("userseckey");
@@ -382,6 +398,14 @@ public class InfoServlet extends HttpServlet{
 				newtagname = req.getParameter("newtagname");
 				if(newtagname != null){
 					newtagname = Common.EncodeURI(newtagname);
+					
+					key = KeyFactory.createKey("TagObjGroup",1L);
+					q = new Query("TagObj",key);
+					q.addFilter("tagname",FilterOperator.EQUAL,newtagname);
+					q.addFilter("userid",FilterOperator.EQUAL,userid);
+					if(ds.prepare(q).asSingleEntity() != null){
+						throw new Exception("TagName Duplicate");
+					}
 				}
 				fileidlist = req.getParameter("fileidlist");
 				
@@ -406,18 +430,34 @@ public class InfoServlet extends HttpServlet{
 						
 						txn.commit();
 						
-						while(true){
-							idenValue = ms.getIdentifiable("cache_UserTagObjMap_" + userid);
-							if(idenValue == null){
-								break;
+						if(newtagname == null){
+							msKey = "cache_TagObj_" + userid + "_" + tagObj.tagname;
+							while(true){
+								idenValue = ms.getIdentifiable(msKey);
+								if(idenValue != null){
+									if(idenValue.getValue() == null){
+										break;
+									}
+									if(ms.putIfUntouched(msKey,idenValue,tagObj) == true){
+										break;
+									}
+								}
 							}
-							userTagObjMap = (Map<String,Object>)idenValue.getValue();
-							if(newtagname != null){
-								userTagObjMap.remove(tagname);
-							}
-							userTagObjMap.put(tagObj.tagname,tagObj);
-							if(ms.putIfUntouched("cache_UserTagObjMap_" + userid,idenValue,userTagObjMap) == true){
-								break;
+						}else{
+							ms.put("cache_TagObj_" + userid + "_" + tagname,null);
+							
+							msKey = "cache_TagObj_" + userid + "_" + newtagname;
+							ms.put(msKey,tagObj);
+							while(true){
+								idenValue = ms.getIdentifiable("user_TagCacheKey_" + userid);
+								if(idenValue == null){
+									break;
+								}
+								userTagCacheKey = (List<String>)idenValue.getValue();
+								userTagCacheKey.add(msKey);
+								if(ms.putIfUntouched("user_TagCacheKey_" + userid,idenValue,userTagCacheKey) == true){
+									break;
+								}
 							}
 						}
 						

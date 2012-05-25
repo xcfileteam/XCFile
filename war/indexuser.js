@@ -9,6 +9,7 @@ var e_input_taginfo_tagname;
 var e_div_taginfo_setbutton;
 var e_div_taginfo_delbutton;
 
+var e_input_user_checkall;
 var e_div_user_filelist;
 var e_div_user_fileitem_ori;
 var e_table_fileinfo_filename;
@@ -117,10 +118,15 @@ function userCreateTagItem(tagname,fileidlist){
 	e_div_user_tagitem.e_div_point = divs[0];
 	divs[1].appendChild(document.createTextNode(decodeURIComponent(tagname)));
 	e_div_user_tagitem.e_div_tagname = divs[1];
-	divs[2].e_div_user_tagitem = e_div_user_tagitem;
-	e_div_user_tagitem.e_div_operbutton = divs[2];
-	divs[2].observe('mouseover',function(){this.className='button_b_hi';});
-	divs[2].observe('mouseout',function(){this.className='button_b';});
+	if(tagname == 'All'){
+		divs[2].parentNode.removeChild(divs[2]);
+		e_div_user_tagitem.e_div_operbutton = null;
+	}else{
+		divs[2].e_div_user_tagitem = e_div_user_tagitem;
+		e_div_user_tagitem.e_div_operbutton = divs[2];
+		divs[2].observe('mouseover',function(){this.className='button_b_hi';});
+		divs[2].observe('mouseout',function(){this.className='button_b';});
+	}
 	
 	e_div_user_tagitem.style.display = '';
 	e_div_user_taglist.appendChild(e_div_user_tagitem);
@@ -317,6 +323,8 @@ function userCreateFileItem(fileid,filename,filesize,timestamp,link){
 	e_div_user_fileitem.e_span_tagstring = e_div_user_fileitem.getElementsByTagName('span')[0];
 	e_div_user_fileitem.e_span_tagstring.appendChild(document.createTextNode(''));
 	
+	e_div_user_fileitem.clickignore = [e_div_user_fileitem.e_input_check,e_a_link,divs[4],divs[5]];
+	
 	if(e_div_user_tagselect.tagobj.tagname == 'All'){
 		e_div_user_fileitem.style.display = '';
 	}
@@ -409,6 +417,8 @@ function userSwitchFileList(){
 	var fileObj;
 	var tagObj;
 	var partFileIdList;
+	
+	e_input_user_checkall.checked = false;
 	
 	for(fileid in fileMap){
 		fileObj = fileMap[fileid];
@@ -610,6 +620,7 @@ function userFileInfoSet(e_div_user_fileitem){
 				if(tagnamemap[tagname] == undefined){
 					tagObj = tagMap[tagname];
 					chgTagNameMap[tagname] = tagname;
+					delete fileObj.tagnamemap[tagname];
 					
 					partFlieIdList = tagObj.fileidlist.split('|');
 					tagObj.fileidlist = '';

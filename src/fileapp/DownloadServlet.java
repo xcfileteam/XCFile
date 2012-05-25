@@ -4,6 +4,7 @@ import java.io.*;
 import java.nio.*;
 import java.util.logging.*;
 import javax.servlet.http.*;
+
 import com.google.appengine.api.datastore.*;
 import com.google.appengine.api.datastore.Query.*;
 import com.google.appengine.api.memcache.*;
@@ -42,6 +43,13 @@ public class DownloadServlet extends HttpServlet{
 		outb.flush();
 	}
 	
+	public void doOptions(HttpServletRequest req,HttpServletResponse resp) throws IOException{
+		resp.addHeader("Access-Control-Allow-Origin","*");
+		resp.addHeader("Access-Control-Allow-Headers","Origin,X-Prototype-Version,X-Requested-With,Content-type,Accept");
+		resp.addHeader("Access-Control-Allow-Methods","POST");
+		resp.addHeader("Access-Control-Max-Age","3628800");
+	}
+	
 	public void doGet(HttpServletRequest req,HttpServletResponse resp) throws IOException{
 		DatastoreService ds;
 		MemcacheService ms;
@@ -52,6 +60,7 @@ public class DownloadServlet extends HttpServlet{
 		FileObj fileObj;
 		Key key;
 		Query q;
+		Entity entity;
 		String serverLink;
 				
 		try{
@@ -70,8 +79,13 @@ public class DownloadServlet extends HttpServlet{
 					key = KeyFactory.createKey("FileObjGroup",1L);
 					q = new Query("FileObj",key);
 					q.addFilter("fileid",FilterOperator.EQUAL,fileid);
+					entity = ds.prepare(q).asSingleEntity();
+					if(entity == null){
+						throw new Exception("File Not Found");
+					}
+					
 					fileObj = new FileObj();
-					fileObj.getDB(ds.prepare(q).asSingleEntity());
+					fileObj.getDB(entity);
 					ms.put("cache_FileObj_" + fileObj.fileid,fileObj);
 				}
 				
@@ -88,6 +102,7 @@ public class DownloadServlet extends HttpServlet{
 					req.setAttribute("filesize",String.valueOf(fileObj.filesize));
 					req.setAttribute("serverlist",fileObj.serverlist);
 					req.setAttribute("blobkeylist",fileObj.blobkeylist);
+					
 					this.getServletContext().getRequestDispatcher("/down.jsp").forward(req,resp);
 				}
 			}
@@ -99,6 +114,7 @@ public class DownloadServlet extends HttpServlet{
 	public void doPost(HttpServletRequest req,HttpServletResponse resp) throws IOException{
 		String blobkeystring;
 		
+		resp.addHeader("Access-Control-Allow-Origin","*");
 		resp.setContentType("application/octet-stream");
 		
 		try{
