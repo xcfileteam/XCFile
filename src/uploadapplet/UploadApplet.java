@@ -73,7 +73,7 @@ public class UploadApplet extends JApplet implements ActionListener{
 		gridCon.gridwidth = 1;
 		gridCon.gridheight = 1;
 		
-		buttonOpen = new FlatButton("選擇檔案");
+		buttonOpen = new FlatButton("加入檔案");
 		gridCon.gridx = 0;
 		gridCon.gridy = 0;
 		gridCon.insets = new Insets(0,0,0,2);
@@ -82,7 +82,7 @@ public class UploadApplet extends JApplet implements ActionListener{
 		buttonOpen.addActionListener(this);
 		this.add(buttonOpen,gridCon);
 		
-		buttonUpload = new FlatButton("上傳檔案");
+		buttonUpload = new FlatButton("上傳");
 		gridCon.gridx = 1;
 		gridCon.gridy = 0;
 		gridCon.insets = new Insets(0,2,0,0);
@@ -133,7 +133,7 @@ public class UploadApplet extends JApplet implements ActionListener{
 		
 		uploadThread = mapUpload.get(itemid);
 		if(uploadThread != null){
-			uploadThread.deleteflag = true;
+			uploadThread.cancelflag = true;
 		}
 	}
 	public static void cancelUpload(int itemid){
@@ -141,7 +141,6 @@ public class UploadApplet extends JApplet implements ActionListener{
 		
 		uploadThread = mapUpload.get(itemid);
 		if(uploadThread != null){
-			uploadThread.deleteflag = true;
 			uploadThread.cancelflag = true;
 		}
 	}
@@ -172,7 +171,8 @@ public class UploadApplet extends JApplet implements ActionListener{
 			
 			while(queueUpload.isEmpty() == false){
 				uploadThread = queueUpload.poll();
-				if(uploadThread.deleteflag == false){
+				if(uploadThread.cancelflag == false){
+					updateState(uploadThread.itemid,"upload");
 					threadPool.submit(uploadThread);
 				}
 			}

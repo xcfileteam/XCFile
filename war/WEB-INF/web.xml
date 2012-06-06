@@ -12,6 +12,14 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 		<servlet-name>ListServlet</servlet-name>
 		<url-pattern>/list</url-pattern>
 	</servlet-mapping>
+	<servlet>
+		<servlet-name>PhoneServlet</servlet-name>
+		<servlet-class>indexapp.PhoneServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>PhoneServlet</servlet-name>
+		<url-pattern>/phone</url-pattern>
+	</servlet-mapping>
 	
 	<servlet>
 		<servlet-name>UploadServlet</servlet-name>
@@ -36,7 +44,7 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 	
 	<servlet>
 		<servlet-name>InfoServlet</servlet-name>
-		<servlet-class>fileapp.InfoServlet</servlet-class>
+		<servlet-class>indexapp.InfoServlet</servlet-class>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>InfoServlet</servlet-name>
@@ -44,7 +52,7 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 	</servlet-mapping>
 	<servlet>
 		<servlet-name>InitServlet</servlet-name>
-		<servlet-class>fileapp.InitServlet</servlet-class>
+		<servlet-class>indexapp.InitServlet</servlet-class>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>InitServlet</servlet-name>
@@ -52,7 +60,7 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 	</servlet-mapping>
 	<servlet>
 		<servlet-name>TaskServlet</servlet-name>
-		<servlet-class>fileapp.TaskServlet</servlet-class>
+		<servlet-class>indexapp.TaskServlet</servlet-class>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>TaskServlet</servlet-name>

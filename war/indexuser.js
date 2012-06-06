@@ -1,5 +1,4 @@
 var e_div_user;
-var e_div_fileinfo;
 
 var e_div_user_taglist;
 var e_div_user_tagitem_ori;
@@ -12,6 +11,7 @@ var e_div_taginfo_delbutton;
 var e_input_user_checkall;
 var e_div_user_filelist;
 var e_div_user_fileitem_ori;
+var e_div_fileinfo;
 var e_table_fileinfo_filename;
 var e_input_fileinfo_filename;
 var e_div_fileinfo_taglist;
@@ -28,6 +28,7 @@ function userGetList(){
 	
 	new Ajax.Request(userlink + '/info',{
 		method:'post',
+		asynchronous:false,
 		parameters:{'type':'usergetlist','usersecid':usersecid,'userseckey':userseckey},
 		onSuccess:function(transport){
 			var index;

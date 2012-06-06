@@ -124,7 +124,7 @@
 			e_div_uploadlist.style.height = window.innerHeight - e_div_uploadlist.offsetTop - 160 + 'px';
 			
 			if(loginflag == true){
-				e_div_user.style.height = window.innerHeight - e_div_user.offsetTop - 34 + 'px';
+				e_div_user.style.height = window.innerHeight - e_div_user.offsetTop - 30 + 'px';
 				e_div_user_taglist.style.height = window.innerHeight - e_div_user.offsetTop - 84 + 'px';
 				e_div_user_filelist.style.height = window.innerHeight - e_div_user.offsetTop - 84 + 'px';
 				e_div_fileinfo_taglist.style.height = window.innerHeight - e_div_fileinfo_taglist.offsetTop - 364 + 'px';
@@ -353,7 +353,7 @@
 		</div>
 		
 		<div id="div_user" style="width:100%; text-align:left; position:absolute; left:0px; top:140px; z-index:1; display:none;">
-			<div style="height:24px; line-height:24px; padding:0px 0px 0px 10px; background-color:#36454F; color:#FFFFFF; font-weight:bold;">檔案管理</div>
+			<div style="width:auto; height:24px; line-height:24px; padding:0px 0px 0px 10px; background-color:#36454F; color:#FFFFFF; font-weight:bold;">檔案管理(目前僅支援Chrome和FireFox)</div>
 			<table style="width:100%; background-color:#FDFDFD; border-collapse:collapse;"><tr>
 				<td valign="top" style="width:200px;">
 					<div style="width:100%;">

@@ -14,7 +14,6 @@ public class UploadThread extends SwingWorker<Void,Void>{
 	public static final long PART_SIZE = 8388608L;
 	
 	public int itemid;
-	public boolean deleteflag;
 	public boolean cancelflag;
 	public File file;
 	public String fileid;
@@ -40,7 +39,6 @@ public class UploadThread extends SwingWorker<Void,Void>{
 			
 			filename = file.getName();
 			
-			deleteflag = false;
 			cancelflag = false;
 			blobkeyMap = Collections.synchronizedSortedMap(new TreeMap<Long,String>());
 			RAF = new RandomAccessFile(file,"r");
@@ -94,6 +92,8 @@ public class UploadThread extends SwingWorker<Void,Void>{
 	}
 	private void postUpload(String serverlink) throws Exception{
 		int index;
+		int retry;
+		
 		String serverString;
 		Object[] blobkeyList;
 		String blobkeyString;
@@ -101,6 +101,7 @@ public class UploadThread extends SwingWorker<Void,Void>{
 		HttpURLConnection conn;
 		BufferedOutputStream outb;
 		StringBuilder header;
+		int resCode;
 		
 		serverString = serverList.get(0);
 		for(index = 1;index < serverList.size();index++){
@@ -113,46 +114,63 @@ public class UploadThread extends SwingWorker<Void,Void>{
 			blobkeyString += "|" + (String)blobkeyList[index];
 		}
 
-		conn = (HttpURLConnection)new URL(serverlink + "/upload").openConnection();
-		conn.setRequestMethod("POST");
-		conn.setDoOutput(true);
-		conn.setDoInput(true);
-		conn.setRequestProperty("Cache-Control","no-cache,max-age=0");
-		conn.setRequestProperty("Pragma","no-cache");
-		
-		header = new StringBuilder();
-		header.append(fileid);
-		header.append("\r\n");
-		header.append(fileseckey);
-		header.append("\r\n");
-		header.append("create\r\n");
-		header.append(filename);
-		header.append("\r\n");
-		header.append(String.valueOf(file.length()));
-		header.append("\r\n");
-		header.append(serverString);
-		header.append("\r\n");
-		header.append(blobkeyString);
-		header.append("\r\n");
-		
-		if(UploadApplet.loginFlag == false){
-			header.append("\r\n");
-		}else{
-			header.append(UploadApplet.userSecId);
-			header.append("\r\n");
-			header.append(UploadApplet.userSecKey);
-			header.append("\r\n");
+		retry = 8;
+		while(retry > 0){
+			try{
+				conn = (HttpURLConnection)new URL(serverlink + "/upload").openConnection();
+				conn.setRequestMethod("POST");
+				conn.setDoOutput(true);
+				conn.setDoInput(true);
+				conn.setRequestProperty("Cache-Control","no-cache,max-age=0");
+				conn.setRequestProperty("Pragma","no-cache");
+				
+				header = new StringBuilder();
+				header.append(fileid);
+				header.append("\r\n");
+				header.append(fileseckey);
+				header.append("\r\n");
+				header.append("create\r\n");
+				header.append(filename);
+				header.append("\r\n");
+				header.append(String.valueOf(file.length()));
+				header.append("\r\n");
+				header.append(serverString);
+				header.append("\r\n");
+				header.append(blobkeyString);
+				header.append("\r\n");
+				
+				if(UploadApplet.loginFlag == false){
+					header.append("\r\n");
+				}else{
+					header.append(UploadApplet.userSecId);
+					header.append("\r\n");
+					header.append(UploadApplet.userSecKey);
+					header.append("\r\n");
+				}
+				
+				outb = new BufferedOutputStream(conn.getOutputStream());
+				outb.write(header.toString().getBytes("UTF-8"));
+				outb.flush();
+				
+				resCode = conn.getResponseCode();
+				outb.close();
+				
+				if(resCode == 200){
+					break;
+				}
+			}catch(ClosedChannelException e){
+				break;
+			}catch(UnknownHostException e){
+				e.printStackTrace();
+				Thread.sleep(2000);
+			}catch(Exception e){
+				e.printStackTrace();
+				retry--;
+			}
 		}
-		
-		outb = new BufferedOutputStream(conn.getOutputStream());
-		outb.write(header.toString().getBytes("UTF-8"));
-		outb.flush();
-		
-		if(conn.getResponseCode() != 200){
-			System.out.println("postUpload Error");
+		if(retry == 0){
+			throw new Exception("Error");
 		}
-		
-		outb.close();
 	}
 	private boolean updateLoop() throws Exception{
 		Long prevNetSize;
@@ -227,7 +245,9 @@ public class UploadThread extends SwingWorker<Void,Void>{
 		int delayTime;
 		
 		try{
-			UploadApplet.updateState(itemid,"upload");
+			if(cancelflag == true){
+				return null;
+			}
 			
 			fileSize = file.length();
 			getList(fileSize);

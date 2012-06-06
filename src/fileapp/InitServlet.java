@@ -5,6 +5,7 @@ import java.util.*;
 import javax.servlet.http.*;
 import com.google.appengine.api.datastore.*;
 import com.google.appengine.api.memcache.*;
+import com.google.appengine.api.memcache.MemcacheService.SetPolicy;
 
 @SuppressWarnings("serial")
 public class InitServlet extends HttpServlet{
@@ -12,9 +13,15 @@ public class InitServlet extends HttpServlet{
 		DatastoreService ds;
 		MemcacheService ms;
 
+		Key key;
+		Entity entity;
+		
 		ds = DatastoreServiceFactory.getDatastoreService();
 		ms = MemcacheServiceFactory.getMemcacheService();
 		
-		ms.clearAll();
+		key = KeyFactory.createKey("PhoneObjGroup",1L);
+		entity = new Entity("PhoneObj",key);
+		entity.setProperty("server","xcfileappab");
+		ds.put(entity);
 	}
 }
